@@ -1,0 +1,27 @@
+# robots.txt - 검색 엔진 크롤러 가이드
+
+# 모든 검색 엔진 허용
+User-agent: *
+Allow: /
+
+# 크롤링 제외 경로
+Disallow: /admin/
+Disallow: /private/
+Disallow: /*.json$
+Disallow: /*.xml$
+
+# 사이트맵 위치 (추후 생성 시)
+# Sitemap: https://yourdomain.com/sitemap.xml
+
+# 크롤 속도 조절 (초 단위)
+Crawl-delay: 10
+
+# 구글봇 특정 설정
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 5
+
+# 네이버봇 특정 설정
+User-agent: Yeti
+Allow: /
+Crawl-delay: 5
