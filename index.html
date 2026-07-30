@@ -9,15 +9,15 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/memorial.css">
-    <!-- eternal_memory 연동 설정 (운영 환경에 맞게 변경) -->
-    <meta name="eruso-api-base" content="http://localhost:8200">
-    <meta name="eruso-app-base" content="http://localhost:3200">
+    <!-- eternal_memory 연동 (로컬 호스트에서는 JS가 localhost로 자동 전환) -->
+    <meta name="eruso-api-base" content="https://api.erum2026.co.kr">
+    <meta name="eruso-app-base" content="https://erum2026.co.kr">
 
 </head>
     <div id="popup-container" style="
     position: fixed; 
     top: 50%; left: 50%; transform: translate(-50%, -50%);
-    width: 1850px; height: 900px; 
+    width: 1850px; height: 1200px; 
     background: #0a0e1c; color: #fff; 
     border: 2px solid #3b4266; border-radius: 20px;
     overflow: hidden; font-family: 'Pretendard', sans-serif;
@@ -330,17 +330,17 @@
                     </div>
                 </div><!-- /.memorial-layout -->
 
-                <!-- 아래: 추모관 실시간 목록 (eternal_memory API 연동) -->
-                <div id="memorial-browse" class="memorial-embed" aria-label="추모관 목록">
+                <!-- 아래: 공개 추모관 목록 (eruso_eternal_memory API 연동, is_public만) -->
+                <div id="memorial-browse" class="memorial-embed" aria-label="공개 추모관 목록">
                     <div class="memorial-embed-head">
                         <div>
-                            <h3 class="memorial-embed-title">추모관 둘러보기</h3>
-                            <p class="memorial-embed-sub">고인/추모관을 검색하고, 바로 방문·공유할 수 있습니다.</p>
+                            <h3 class="memorial-embed-title">공개 추모관 둘러보기</h3>
+                            <p class="memorial-embed-sub">공개로 설정된 추모관만 검색·방문할 수 있습니다.</p>
                         </div>
                         <div class="memorial-embed-actions">
                             <label class="memorial-search" aria-label="추모관 검색">
                                 <i class="fas fa-magnifying-glass"></i>
-                                <input id="memorialSearch" type="search" placeholder="고인/추모관 이름 검색" autocomplete="off" />
+                                <input id="memorialSearch" type="search" placeholder="고인 성함 또는 추모관 이름" autocomplete="off" />
                             </label>
                             <button id="memorialRefresh" type="button" class="btn btn-secondary" style="white-space:nowrap;">
                                 <i class="fas fa-rotate"></i>
@@ -349,9 +349,9 @@
                         </div>
                     </div>
                     <div id="memorialList" class="memorial-list" role="list" aria-live="polite">
-                        <div class="memorial-skeleton">추모관 목록을 불러오는 중입니다...</div>
+                        <div class="memorial-skeleton">공개 추모관 목록을 불러오는 중입니다...</div>
                     </div>
-                    <div class="memorial-embed-foot"></div>
+                    <p class="memorial-embed-foot">비공개 추모관은 목록에 표시되지 않습니다. 초대 링크가 있는 경우 링크로 바로 방문해 주세요.</p>
                 </div><!-- /.memorial-embed -->
 
             </div><!-- /.container -->
