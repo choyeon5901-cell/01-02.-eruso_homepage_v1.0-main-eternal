@@ -1,6 +1,8 @@
-﻿const navbar = document.querySelector('.navbar');
+const navbar = document.querySelector('.navbar');
 const navToggle = document.querySelector('.nav-toggle');
 const navMenu = document.querySelector('.nav-menu');
+const navDrawerBackdrop = document.getElementById('navDrawerBackdrop');
+const navInner = document.querySelector('.nav-inner');
 const navLinks = document.querySelectorAll('.nav-menu a, .nav-brand, .nav-cta, .hero-actions a, .footer a');
 const scrollTopBtn = document.getElementById('scrollToTop');
 const contactForm = document.getElementById('contactForm');
@@ -9,35 +11,261 @@ const packageButtons = document.querySelectorAll('.package-card');
 const selectedPackage = document.getElementById('selectedPackage');
 const previewTabs = document.querySelectorAll('.preview-tab');
 const previewPanes = document.querySelectorAll('.preview-pane');
-const tributeActions = document.querySelectorAll('.tribute-action');
 const countElements = document.querySelectorAll('[data-count]');
-const messageOpen = document.querySelector('.message-open');
-const quickMessageForm = document.getElementById('quickMessage');
-const quickMessageText = document.getElementById('quickMessageText');
-const quickMessageClose = document.querySelector('.quick-message-close');
 const hero = document.querySelector('.hero');
-const memoryNotes = document.querySelector('.memory-notes');
-const memoryNoteTime = document.querySelector('.memory-note-time');
-const memoryNoteText = document.querySelector('.memory-note-text');
+const heroSlides = document.querySelectorAll('[data-hero-slide]');
+const heroVideo = document.querySelector('[data-hero-video]');
+const heroSlideshow = document.querySelector('[data-hero-slideshow]');
+const heroCaption = document.querySelector('[data-hero-caption]');
+const HERO_SLIDE_MS = 6500;
+const NAV_DRAWER_MQ = window.matchMedia('(max-width: 1400px)');
+let heroSlideTimer = null;
+let heroLoopActive = true;
+let navBodyOverflowPrev = '';
+let navMenuHomeParent = navInner;
+let navMenuHomeNext = null;
+
+function isNavDrawerMode() {
+    return NAV_DRAWER_MQ.matches;
+}
+
+function placeNavMenuForViewport() {
+    if (!navMenu || !navInner) return;
+
+    if (isNavDrawerMode()) {
+        // fixed 기준을 viewport로 — navbar 밖으로 이동
+        if (navMenu.parentElement !== document.body) {
+            navMenuHomeParent = navMenu.parentElement;
+            navMenuHomeNext = navMenu.nextSibling;
+            document.body.appendChild(navMenu);
+        }
+        if (navDrawerBackdrop && navDrawerBackdrop.parentElement !== document.body) {
+            document.body.appendChild(navDrawerBackdrop);
+        }
+        return;
+    }
+
+    // 데스크톱: 네비 안으로 복귀
+    if (navMenu.parentElement !== navInner) {
+        const anchor = navInner.querySelector('.nav-right');
+        if (anchor) navInner.insertBefore(navMenu, anchor);
+        else navInner.appendChild(navMenu);
+    }
+    if (navDrawerBackdrop && navbar && navDrawerBackdrop.parentElement !== navbar) {
+        navbar.appendChild(navDrawerBackdrop);
+    }
+    closeMenu();
+}
+
+function clearHeroSlideTimer() {
+    if (heroSlideTimer) {
+        window.clearInterval(heroSlideTimer);
+        heroSlideTimer = null;
+    }
+}
+
+function showHeroCaption(visible) {
+    if (!heroCaption) return;
+    heroCaption.classList.toggle('is-visible', !!visible);
+}
+
+function activateHeroVideo() {
+    if (!heroVideo) {
+        revealHeroSlideshow();
+        return;
+    }
+
+    clearHeroSlideTimer();
+    showHeroCaption(true);
+
+    if (heroSlideshow) {
+        heroSlideshow.classList.add('is-waiting');
+        heroSlideshow.classList.remove('is-active');
+    }
+
+    heroVideo.classList.add('is-active');
+    try {
+        heroVideo.currentTime = 0;
+    } catch (_) { /* ignore */ }
+
+    const onEnded = () => {
+        heroVideo.removeEventListener('ended', onEnded);
+        heroVideo.removeEventListener('error', onEnded);
+        if (!heroLoopActive) return;
+        revealHeroSlideshow();
+    };
+
+    heroVideo.addEventListener('ended', onEnded, { once: true });
+    heroVideo.addEventListener('error', onEnded, { once: true });
+
+    const playPromise = heroVideo.play();
+    if (playPromise && typeof playPromise.then === 'function') {
+        playPromise.catch(() => {
+            // autoplay blocked → stills only, but keep looping stills
+            onEnded();
+        });
+    }
+}
+
+function revealHeroSlideshow() {
+    showHeroCaption(false);
+
+    if (heroVideo) {
+        heroVideo.classList.remove('is-active');
+        try { heroVideo.pause(); } catch (_) { /* ignore */ }
+    }
+
+    if (heroSlideshow) {
+        heroSlideshow.classList.remove('is-waiting');
+        heroSlideshow.classList.add('is-active');
+    }
+
+    // reset to first still
+    heroSlides.forEach((el, i) => el.classList.toggle('is-active', i === 0));
+    startHeroSlideshow();
+}
+
+function startHeroSlideshow() {
+    if (!heroSlides.length) return;
+    clearHeroSlideTimer();
+
+    let index = Array.from(heroSlides).findIndex((el) => el.classList.contains('is-active'));
+    if (index < 0) index = 0;
+    let steps = 0;
+
+    heroSlideTimer = window.setInterval(() => {
+        steps += 1;
+
+        // 마지막 장까지 충분히 보여준 뒤 영상으로 복귀
+        if (heroLoopActive && heroVideo && steps >= heroSlides.length) {
+            clearHeroSlideTimer();
+            window.setTimeout(() => {
+                if (heroLoopActive) activateHeroVideo();
+            }, 400);
+            return;
+        }
+
+        heroSlides[index].classList.remove('is-active');
+        index = (index + 1) % heroSlides.length;
+        heroSlides[index].classList.add('is-active');
+    }, HERO_SLIDE_MS);
+}
+
+function startHeroLifeJourney() {
+    const preferReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (preferReduced || !heroVideo) {
+        heroLoopActive = false;
+        revealHeroSlideshow();
+        // reduced motion: still loop images only
+        if (heroSlides.length > 1) {
+            heroLoopActive = false;
+            clearHeroSlideTimer();
+            let index = 0;
+            heroSlideTimer = window.setInterval(() => {
+                heroSlides[index].classList.remove('is-active');
+                index = (index + 1) % heroSlides.length;
+                heroSlides[index].classList.add('is-active');
+            }, HERO_SLIDE_MS);
+        }
+        return;
+    }
+
+    activateHeroVideo();
+}
+
+startHeroLifeJourney();
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-const memorialMessages = [
-    { time: '방금 전', text: '함께한 시간을 오래 기억하겠습니다.' },
-    { time: '1분 전', text: '멀리서나마 마음 깊이 추모합니다.' },
-    { time: '3분 전', text: '따뜻했던 웃음과 마음을 잊지 않겠습니다.' },
-    { time: '5분 전', text: '남겨주신 사랑을 가족과 함께 간직하겠습니다.' }
-];
 const contactApiEndpoint = '/api/consultations.php';
 const contactBackupStorageKey = 'erusoMemorialConsultationBackups';
 
-let noteIndex = 0;
 let previewIndex = 0;
 let previewTimer;
-let noteRotationTimer;
 const tributeCounts = {};
 
+function formatStatNumber(value) {
+    const n = Number(value) || 0;
+    return n.toLocaleString('ko-KR');
+}
+
+function setTributeCount(key, value) {
+    const countElement = document.querySelector(`[data-count="${key}"]`);
+    if (!countElement) return;
+    tributeCounts[key] = Number(value) || 0;
+    countElement.textContent = formatStatNumber(tributeCounts[key]);
+}
+
 countElements.forEach((element) => {
-    tributeCounts[element.dataset.count] = Number.parseInt(element.textContent, 10) || 0;
+    tributeCounts[element.dataset.count] = Number.parseInt(String(element.textContent).replace(/,/g, ''), 10) || 0;
+    element.textContent = formatStatNumber(tributeCounts[element.dataset.count]);
 });
+
+/** 홈페이지 추모 통계 — eternal_memory 공개 API */
+async function loadHomepageTributeStats() {
+    const host = (location.hostname || '').toLowerCase();
+    const isLocal = !host || host === 'localhost' || host === '127.0.0.1';
+    const metaApi = document.querySelector('meta[name="eruso-api-base"]')?.getAttribute('content');
+    const apiBase = (isLocal ? 'http://localhost:1210' : (metaApi || 'https://api.erum2026.co.kr')).replace(/\/$/, '');
+    try {
+        const res = await fetch(`${apiBase}/api/public/homepage-stats`, { credentials: 'omit' });
+        if (!res.ok) throw new Error(`stats ${res.status}`);
+        const data = await res.json();
+        [
+            ['candle', data.candle],
+            ['incense', data.incense],
+            ['flower', data.flower],
+            ['offering', data.offering],
+            ['messages', data.messages],
+            ['visits', data.visits],
+        ].forEach(([key, value]) => setTributeCount(key, value));
+    } catch (err) {
+        console.warn('homepage stats load failed', err);
+    }
+}
+
+/** 홈페이지 URL 접속 기록 → 방문기록 통계 (동일 접속자 1시간 윈도우) */
+async function trackHomepageVisit() {
+    const host = (location.hostname || '').toLowerCase();
+    const isLocal = !host || host === 'localhost' || host === '127.0.0.1';
+    const metaApi = document.querySelector('meta[name="eruso-api-base"]')?.getAttribute('content');
+    const apiBase = (isLocal ? 'http://localhost:1210' : (metaApi || 'https://api.erum2026.co.kr')).replace(/\/$/, '');
+    const keyName = 'eruso_visitor_key';
+    const hitKey = 'eruso_visit_hit:homepage|' + (location.pathname || '/');
+    const windowMs = 60 * 60 * 1000;
+    let visitorKey = '';
+    try {
+        visitorKey = localStorage.getItem(keyName) || '';
+        if (!visitorKey || visitorKey.length < 8) {
+            visitorKey = (crypto.randomUUID ? crypto.randomUUID() : `v${Date.now()}${Math.random()}`).replace(/-/g, '');
+            localStorage.setItem(keyName, visitorKey);
+        }
+        const prev = Number(localStorage.getItem(hitKey) || 0);
+        if (prev && Date.now() - prev < windowMs) {
+            await loadHomepageTributeStats();
+            return;
+        }
+    } catch (_) {
+        visitorKey = `v${Date.now()}${Math.random().toString(36).slice(2)}`;
+    }
+    try {
+        await fetch(`${apiBase}/api/public/page-visit`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'omit',
+            body: JSON.stringify({
+                path: location.pathname || '/',
+                page_kind: 'homepage',
+                visitor_key: visitorKey,
+            }),
+        });
+        try { localStorage.setItem(hitKey, String(Date.now())); } catch (_) { /* ignore */ }
+        await loadHomepageTributeStats();
+    } catch (err) {
+        console.warn('homepage visit track failed', err);
+    }
+}
+
+loadHomepageTributeStats();
+trackHomepageVisit();
 
 function updateNavState() {
     const scrolled = window.scrollY > 24;
@@ -50,12 +278,41 @@ function updateNavState() {
     }
 }
 
-function closeMenu() {
-    navMenu.classList.remove('active');
-    navToggle.setAttribute('aria-expanded', 'false');
+function setNavDrawerOpen(open) {
+    if (!navMenu || !navToggle) return;
+
+    if (open && isNavDrawerMode()) {
+        placeNavMenuForViewport();
+    }
+
+    navMenu.classList.toggle('active', open);
+    navbar?.classList.toggle('nav-drawer-open', open);
+    document.body.classList.toggle('nav-drawer-open', open);
+    navToggle.setAttribute('aria-expanded', String(open));
+    navToggle.setAttribute('aria-label', open ? '메뉴 닫기' : '메뉴 열기');
+
     const icon = navToggle.querySelector('i');
-    icon.classList.remove('fa-times');
-    icon.classList.add('fa-bars');
+    if (icon) {
+        icon.classList.toggle('fa-bars', !open);
+        icon.classList.toggle('fa-times', open);
+    }
+
+    if (navDrawerBackdrop) {
+        navDrawerBackdrop.classList.toggle('is-open', open);
+        if (open) navDrawerBackdrop.removeAttribute('hidden');
+        else navDrawerBackdrop.setAttribute('hidden', '');
+    }
+
+    if (open) {
+        navBodyOverflowPrev = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+    } else {
+        document.body.style.overflow = navBodyOverflowPrev || '';
+    }
+}
+
+function closeMenu() {
+    setNavDrawerOpen(false);
 }
 
 function showNotification(message, type = 'success') {
@@ -77,32 +334,6 @@ function showNotification(message, type = 'success') {
         notification.classList.add('leaving');
         window.setTimeout(() => notification.remove(), 240);
     }, 4200);
-}
-
-function setMemoryNote(time, text) {
-    if (!memoryNotes || !memoryNoteTime || !memoryNoteText) return;
-
-    memoryNotes.classList.add('is-changing');
-    window.setTimeout(() => {
-        memoryNoteTime.textContent = time;
-        memoryNoteText.textContent = text;
-        memoryNotes.classList.remove('is-changing');
-    }, 240);
-}
-
-function restartNoteRotation() {
-    if (reducedMotion || !memoryNotes) return;
-
-    window.clearInterval(noteRotationTimer);
-    noteRotationTimer = window.setInterval(rotateMemoryNote, 4300);
-}
-
-function incrementTributeCount(key) {
-    const countElement = document.querySelector(`[data-count="${key}"]`);
-    if (!countElement) return;
-
-    tributeCounts[key] = (tributeCounts[key] || 0) + 1;
-    countElement.textContent = tributeCounts[key];
 }
 
 function loadConsultationBackups() {
@@ -175,13 +406,25 @@ updateNavState();
 
 navToggle.addEventListener('click', () => {
     const willOpen = !navMenu.classList.contains('active');
-    navMenu.classList.toggle('active', willOpen);
-    navToggle.setAttribute('aria-expanded', String(willOpen));
-
-    const icon = navToggle.querySelector('i');
-    icon.classList.toggle('fa-bars', !willOpen);
-    icon.classList.toggle('fa-times', willOpen);
+    setNavDrawerOpen(willOpen);
 });
+
+navDrawerBackdrop?.addEventListener('click', () => {
+    closeMenu();
+});
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && navMenu?.classList.contains('active')) {
+        closeMenu();
+    }
+});
+
+placeNavMenuForViewport();
+if (typeof NAV_DRAWER_MQ.addEventListener === 'function') {
+    NAV_DRAWER_MQ.addEventListener('change', placeNavMenuForViewport);
+} else if (typeof NAV_DRAWER_MQ.addListener === 'function') {
+    NAV_DRAWER_MQ.addListener(placeNavMenuForViewport);
+}
 
 navLinks.forEach((link) => {
     link.addEventListener('click', (event) => {
@@ -228,71 +471,6 @@ packageButtons.forEach((button) => {
     });
 });
 
-tributeActions.forEach((button) => {
-    button.addEventListener('click', () => {
-        const key = button.dataset.tribute;
-        const label = button.dataset.label;
-        const noteByKey = {
-            flower: '헌화로 따뜻한 마음을 전했습니다.',
-            message: '추모글에 공감이 더해졌습니다.',
-            visit: '방문 기록을 남겼습니다.'
-        };
-
-        incrementTributeCount(key);
-        button.classList.remove('is-counting');
-        void button.offsetWidth;
-        button.classList.add('is-counting');
-        window.setTimeout(() => button.classList.remove('is-counting'), 360);
-        setMemoryNote('방금 전', noteByKey[key] || `${label}에 마음을 보탰습니다.`);
-        restartNoteRotation();
-    });
-});
-
-function closeQuickMessage() {
-    if (!quickMessageForm || !messageOpen) return;
-
-    quickMessageForm.classList.remove('is-open');
-    messageOpen.classList.remove('is-open');
-    messageOpen.setAttribute('aria-expanded', 'false');
-}
-
-if (messageOpen && quickMessageForm) {
-    messageOpen.addEventListener('click', () => {
-        const willOpen = !quickMessageForm.classList.contains('is-open');
-        quickMessageForm.classList.toggle('is-open', willOpen);
-        messageOpen.classList.toggle('is-open', willOpen);
-        messageOpen.setAttribute('aria-expanded', String(willOpen));
-
-        if (willOpen && quickMessageText) {
-            quickMessageText.focus({ preventScroll: true });
-        }
-    });
-}
-
-if (quickMessageClose) {
-    quickMessageClose.addEventListener('click', closeQuickMessage);
-}
-
-if (quickMessageForm) {
-    quickMessageForm.addEventListener('submit', (event) => {
-        event.preventDefault();
-
-        const message = quickMessageText.value.trim();
-        if (!message) {
-            showNotification('남길 메시지를 입력해주세요.', 'error');
-            return;
-        }
-
-        incrementTributeCount('message');
-        setMemoryNote('방금 전', message);
-        showNotification('추모 메시지가 남겨졌습니다.', 'success');
-        quickMessageText.value = '';
-        closeQuickMessage();
-        restartNoteRotation();
-        window.scrollTo({ top: 0, behavior: 'auto' });
-    });
-}
-
 function activatePreviewTab(tab) {
     const selected = tab.dataset.preview;
     previewTabs.forEach((item) => item.classList.toggle('active', item === tab));
@@ -320,13 +498,6 @@ previewTabs.forEach((tab) => {
 });
 
 startPreviewRotation();
-
-function rotateMemoryNote() {
-    noteIndex = (noteIndex + 1) % memorialMessages.length;
-    setMemoryNote(memorialMessages[noteIndex].time, memorialMessages[noteIndex].text);
-}
-
-restartNoteRotation();
 
 if (contactForm) {
     contactForm.addEventListener('submit', async (event) => {
@@ -414,12 +585,14 @@ revealTargets.forEach((target) => revealObserver.observe(target));
 console.log('ERUSO Memorial System page loaded.');
 
 /* ============================================================
-   Memorial Embed loader (eternal_memory 연동) — 2026-06-16
+   Memorial Embed loader (eternal_memory 연동)
    - 공개 목록:   GET {API_BASE}/api/memorial-rooms/public?q=
    - 상세 링크:   {APP_BASE}/memorial/{id}/view
-   설정 방법:
-     <meta name="eruso-api-base" content="http://localhost:8200">
-     <meta name="eruso-app-base" content="http://localhost:3200">
+   - is_public=true 인 추모관만 API에서 반환
+   설정:
+     <meta name="eruso-api-base" content="https://api.erum2026.co.kr">
+     <meta name="eruso-app-base" content="https://erum2026.co.kr">
+   로컬(localhost/file)에서는 자동으로 :8200 / :3200 사용
    ============================================================ */
 (function initMemorialEmbed() {
     const listEl    = document.getElementById('memorialList');
@@ -427,8 +600,12 @@ console.log('ERUSO Memorial System page loaded.');
     const refreshEl = document.getElementById('memorialRefresh');
     if (!listEl) return;
 
-    const apiBase = document.querySelector('meta[name="eruso-api-base"]')?.getAttribute('content') || 'http://localhost:8200';
-    const appBase = document.querySelector('meta[name="eruso-app-base"]')?.getAttribute('content') || 'http://localhost:3200';
+    const host = (location.hostname || '').toLowerCase();
+    const isLocal = !host || host === 'localhost' || host === '127.0.0.1';
+    const metaApi = document.querySelector('meta[name="eruso-api-base"]')?.getAttribute('content');
+    const metaApp = document.querySelector('meta[name="eruso-app-base"]')?.getAttribute('content');
+    const apiBase = (isLocal ? 'http://localhost:1210' : (metaApi || 'https://api.erum2026.co.kr')).replace(/\/$/, '');
+    const appBase = (isLocal ? 'http://localhost:1200' : (metaApp || 'https://erum2026.co.kr')).replace(/\/$/, '');
 
     const PAGE_SIZE = 4;
     let _allRooms   = [];
@@ -447,6 +624,21 @@ console.log('ERUSO Memorial System page loaded.');
         return String(s || '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     }
 
+    function assetUrl(path) {
+        if (!path) return '';
+        if (/^https?:\/\//i.test(path)) return path;
+        return `${apiBase}/${String(path).replace(/^\//, '')}`;
+    }
+
+    function formatDates(r) {
+        const birth = (r?.deceased_birth_date || '').slice(0, 10);
+        const death = (r?.deceased_death_date || '').slice(0, 10);
+        if (birth && death) return `${birth} ~ ${death}`;
+        if (death) return `별세 ${death}`;
+        if (birth) return `출생 ${birth}`;
+        return '';
+    }
+
     function renderPage(page) {
         _curPage = page;
         const start = (page - 1) * PAGE_SIZE;
@@ -459,13 +651,21 @@ console.log('ERUSO Memorial System page loaded.');
         }
 
         listEl.innerHTML = slice.map((r) => {
-            const title  = r?.title || `추모관 #${r?.id}`;
-            const desc   = r?.deceased_name ? `고인: ${r.deceased_name}` : (r?.description || '');
-            const thumb  = (r?.deceased_name || title).trim().slice(0, 1) || '故';
+            const title  = r?.title || r?.memorial_name || `추모관 #${r?.id}`;
+            const nameLine = r?.deceased_name ? `故 ${r.deceased_name}` : '';
+            const dateLine = formatDates(r);
+            const desc   = [nameLine, dateLine].filter(Boolean).join(' · ')
+                || (r?.memorial_name && r.memorial_name !== title ? r.memorial_name : '')
+                || (r?.description || '');
+            const thumbLetter = (r?.deceased_name || title).trim().slice(0, 1) || '故';
+            const imgSrc = assetUrl(r?.image_url);
+            const thumbHtml = imgSrc
+                ? `<img class="memorial-thumb-img" src="${esc(imgSrc)}" alt="" loading="lazy" data-fallback="${esc(thumbLetter)}">`
+                : esc(thumbLetter);
             const viewUrl = `${appBase}/memorial/${r.id}/view`;
             return `
 <div class="memorial-card" role="listitem">
-  <div class="memorial-thumb" aria-hidden="true">${esc(thumb)}</div>
+  <div class="memorial-thumb" aria-hidden="true">${thumbHtml}</div>
   <div class="memorial-meta">
     <div class="memorial-name" title="${esc(title)}">${esc(title)}</div>
     <div class="memorial-desc" title="${esc(desc)}">${esc(desc)}</div>
@@ -476,6 +676,13 @@ console.log('ERUSO Memorial System page loaded.');
   </div>
 </div>`;
         }).join('');
+
+        listEl.querySelectorAll('.memorial-thumb-img').forEach((img) => {
+            img.addEventListener('error', () => {
+                const fall = img.getAttribute('data-fallback') || '故';
+                img.replaceWith(document.createTextNode(fall));
+            });
+        });
 
         /* 공유 버튼 핸들러 */
         listEl.querySelectorAll('[data-share]').forEach((btn) => {
@@ -527,17 +734,20 @@ console.log('ERUSO Memorial System page loaded.');
     }
 
     async function load(q = '') {
-        listEl.innerHTML = '<div class="memorial-skeleton">추모관 목록을 불러오는 중입니다...</div>';
+        listEl.innerHTML = '<div class="memorial-skeleton">공개 추모관 목록을 불러오는 중입니다...</div>';
         pagerEl.innerHTML = '';
         const url = `${apiBase}/api/memorial-rooms/public?q=${encodeURIComponent(q || '')}`;
         try {
             const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            _allRooms = await res.json();
+            const data = await res.json();
+            // 공개 API가 이미 is_public 필터를 적용하지만, 응답 형태 방어적으로 정규화
+            const rows = Array.isArray(data) ? data : (data.items || []);
+            _allRooms = rows.filter((r) => r && (r.is_public === undefined || r.is_public === true));
             renderPage(1);
         } catch (e) {
-            console.error('[memorial-embed] load failed:', e);
-            listEl.innerHTML = '<div class="memorial-skeleton">추모관 목록을 불러오지 못했습니다. (API 주소/CORS/서버 상태 확인 필요)</div>';
+            console.error('[memorial-embed] load failed:', e, url);
+            listEl.innerHTML = `<div class="memorial-skeleton">공개 추모관 목록을 불러오지 못했습니다.<br><small style="opacity:.75">API: ${esc(apiBase)} — 서버/CORS 상태를 확인해 주세요.</small></div>`;
         }
     }
 
@@ -556,16 +766,41 @@ console.log('ERUSO Memorial System page loaded.');
 // 패키지 선택 + 상담 신청 폼 제출 (API 연동)
 // ═══════════════════════════════════════════════════════
 function initContactForm() {
-    // 패키지 카드 선택
+    const PLAN_NAMES = {
+        FREE: '무료',
+        PRESERVE: '기억의 보존',
+        SHARE: '기억의 공유',
+        ETERNAL: '기억의 영속',
+    };
+
+    const host = (location.hostname || '').toLowerCase();
+    const isLocal = !host || host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local');
+    const metaApp = document.querySelector('meta[name="eruso-app-base"]')?.content;
+    const appBase = (isLocal ? 'http://localhost:1200' : (metaApp || 'https://erum2026.co.kr')).replace(/\/$/, '');
+
+    function syncPlanSelection(btn) {
+        document.querySelectorAll('.package-card').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const plan = (btn.dataset.plan || btn.dataset.package || 'FREE').toUpperCase();
+        const pkgHidden = document.getElementById('selectedPackage');
+        const planHidden = document.getElementById('selectedPlanCode');
+        if (pkgHidden) pkgHidden.value = PLAN_NAMES[plan] || plan;
+        if (planHidden) planHidden.value = plan;
+
+        const signup = document.getElementById('planSignupLink');
+        if (signup) {
+            signup.href = `${appBase}/signup?plan=${encodeURIComponent(plan)}`;
+            signup.textContent = '무료로 회원가입';
+        }
+        const pricing = document.querySelector('.pkg-pricing-link');
+        if (pricing) pricing.href = `${appBase}/pricing`;
+    }
+
     document.querySelectorAll('.package-card').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.package-card').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            const pkg = btn.dataset.package || btn.querySelector('strong')?.textContent?.trim();
-            const hidden = document.getElementById('selectedPackage');
-            if (hidden && pkg) hidden.value = pkg;
-        });
+        btn.addEventListener('click', () => syncPlanSelection(btn));
     });
+    const active = document.querySelector('.package-card.active') || document.querySelector('.package-card');
+    if (active) syncPlanSelection(active);
 
     // 폼 제출
     const form    = document.getElementById('contactForm');
@@ -577,15 +812,22 @@ function initContactForm() {
         e.preventDefault();
         if (!form.checkValidity()) { form.reportValidity(); return; }
 
-        const apiBase = document.querySelector('meta[name="eruso-api-base"]')?.content || 'http://localhost:8200';
+        const metaApi = document.querySelector('meta[name="eruso-api-base"]')?.content;
+        const apiBase = (isLocal ? 'http://localhost:1210' : (metaApi || 'https://api.erum2026.co.kr')).replace(/\/$/, '');
+        const planCode = document.getElementById('selectedPlanCode')?.value || 'FREE';
+        const planLabel = document.getElementById('selectedPackage')?.value || PLAN_NAMES[planCode] || planCode;
 
         const payload = {
             name:         form.querySelector('[name=name]')?.value.trim(),
             phone:        form.querySelector('[name=phone]')?.value.trim(),
             email:        form.querySelector('[name=email]')?.value.trim() || null,
             service_type: form.querySelector('[name=serviceType]')?.value,
-            package_type: document.getElementById('selectedPackage')?.value || null,
-            message:      form.querySelector('[name=message]')?.value.trim() || null,
+            package_type: planLabel,
+            memorial_name: form.querySelector('[name=memorialName]')?.value.trim() || null,
+            message:      [
+                form.querySelector('[name=message]')?.value.trim() || '',
+                `[선택요금제] ${planLabel} (${planCode})`,
+            ].filter(Boolean).join('\n'),
         };
 
         submitBtn.disabled = true;
@@ -600,10 +842,12 @@ function initContactForm() {
             if (!resp.ok) throw new Error(await resp.text());
 
             notice.className = 'form-notice success';
-            notice.textContent = '✅ 상담 신청이 접수되었습니다. 담당자가 1~2 영업일 내 연락드립니다.';
+            notice.textContent = '✅ 이용신청이 접수되었습니다. 관리자 사용승인 후 추모방이 생성됩니다. (1~2 영업일)';
             notice.style.display = 'block';
             form.reset();
-            document.querySelector('.package-card')?.click();  // 패키지 초기화
+            const svc = document.getElementById('serviceType');
+            if (svc) svc.value = '온라인 추모관 개설';
+            document.querySelector('.package-card[data-plan="FREE"]')?.click();
         } catch (err) {
             notice.className = 'form-notice error';
             notice.textContent = '⚠️ 신청 중 오류가 발생했습니다. 전화로 문의해 주세요.';
@@ -611,9 +855,205 @@ function initContactForm() {
             console.error('[contact form]', err);
         } finally {
             submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 상담 신청 접수하기';
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 이용신청 접수하기';
+        }
+    });
+}
+
+/** 사이버 추모관 신청 CTA → 폼 프리셋 + 회원가입 링크 */
+function initCyberMemorialApply() {
+    const host = (location.hostname || '').toLowerCase();
+    const isLocal = host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local');
+    const metaApp = document.querySelector('meta[name="eruso-app-base"]')?.getAttribute('content');
+    const appBase = (isLocal ? 'http://localhost:1200' : (metaApp || 'https://erum2026.co.kr')).replace(/\/$/, '');
+
+    const signup = document.getElementById('cyberSignupLink');
+    if (signup) signup.href = `${appBase}/signup`;
+
+    const jesaTrialHref = `${appBase}/service-select?mode=trial`;
+    ['heroJesaTrialLink', 'footerJesaTrialLink'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.href = jesaTrialHref;
+    });
+
+    const applyBtn = document.getElementById('cyberApplyBtn');
+    applyBtn?.addEventListener('click', () => {
+        const service = applyBtn.getAttribute('data-service') || '온라인 추모관 개설';
+        const svc = document.getElementById('serviceType');
+        if (svc) {
+            const opt = Array.from(svc.options).find((o) => o.value === service || o.textContent.includes(service));
+            if (opt) svc.value = opt.value;
+            else svc.value = service;
         }
     });
 }
 
 document.addEventListener('DOMContentLoaded', initContactForm);
+document.addEventListener('DOMContentLoaded', initCyberMemorialApply);
+document.addEventListener('DOMContentLoaded', initReligionGuideTabs);
+document.addEventListener('DOMContentLoaded', initWorkflowGuideLang);
+
+function initWorkflowGuideLang() {
+    const root = document.getElementById('workflow-guide');
+    if (!root) return;
+
+    const video = root.querySelector('[data-workflow-video]');
+    const source = video?.querySelector('source');
+    const tabs = root.querySelectorAll('[data-workflow-lang]');
+    const stepNodes = root.querySelectorAll('[data-workflow-steps] li');
+    if (!video || !source || !tabs.length) return;
+
+    const version = video.getAttribute('data-video-version') || '1';
+    const copy = {
+        ko: [
+            ['네이버 검색', '이루소 추모서비스'],
+            ['결과 클릭', '이루소 서비스 진입'],
+            ['회원가입', '무료 체험 → 다음'],
+            ['이용신청', '상담·개설 버튼'],
+            ['사용승인', '관리자 검토 대기'],
+            ['로그인', '카카오·네이버 로그인'],
+            ['앱 사용', '사진·방명록·부고'],
+            ['제사당 체험', '무료체험 버튼'],
+        ],
+        en: [
+            ['Naver search', '이루소 추모서비스'],
+            ['Tap result', 'Open Eruso'],
+            ['Sign up', 'Free Trial → Next'],
+            ['Apply', 'Consult / Open buttons'],
+            ['Approval', 'Wait for admin'],
+            ['Login', 'Kakao / Naver login'],
+            ['Use app', 'Photos, guestbook'],
+            ['Hall trial', 'Free trial button'],
+        ],
+        zh: [
+            ['Naver搜索', '이루소 추모서비스'],
+            ['点击结果', '进入이루소'],
+            ['注册', '免费体验 → 下一步'],
+            ['申请', '咨询/开设按钮'],
+            ['审批', '等待管理员'],
+            ['登录', 'Kakao/Naver登录'],
+            ['使用', '照片、留言'],
+            ['祭堂体验', '免费体验按钮'],
+        ],
+        ja: [
+            ['Naver検索', '이루소 추모서비스'],
+            ['結果タップ', '이루소へ'],
+            ['会員登録', '無料体験 → 次へ'],
+            ['利用申請', '相談・開設ボタン'],
+            ['承認', '管理者確認待ち'],
+            ['ログイン', 'Kakao・Naver'],
+            ['アプリ利用', '写真・芳名録'],
+            ['祭祀堂体験', '無料体験ボタン'],
+        ],
+        hi: [
+            ['Naver खोज', '이루소 추모서비스'],
+            ['परिणाम टैप', 'Eruso खोलें'],
+            ['साइन-अप', 'Free Trial → Next'],
+            ['आवेदन', 'Consult बटन'],
+            ['स्वीकृति', 'एडमिन प्रतीक्षा'],
+            ['लॉगिन', 'Kakao / Naver'],
+            ['ऐप उपयोग', 'फ़ोटो, अतिथि पुस्तक'],
+            ['ट्रायल', 'Free Trial बटन'],
+        ],
+    };
+
+    const applyLang = (lang) => {
+        const wasPlaying = !video.paused;
+        const labels = copy[lang] || copy.ko;
+        tabs.forEach((tab) => {
+            const active = tab.getAttribute('data-workflow-lang') === lang;
+            tab.classList.toggle('is-active', active);
+            tab.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+        stepNodes.forEach((li, i) => {
+            const pair = labels[i];
+            if (!pair) return;
+            const title = li.querySelector('[data-step-title]');
+            const desc = li.querySelector('[data-step-desc]');
+            if (title) title.textContent = pair[0];
+            if (desc) desc.textContent = pair[1];
+        });
+        video.poster = `images/workflow-guide/${lang}/slide_01.png`;
+        source.src = `images/workflow-guide-${lang}.mp4?v=${version}`;
+        video.load();
+        if (wasPlaying) {
+            video.play().catch(() => {});
+        }
+    };
+
+    tabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+            const lang = tab.getAttribute('data-workflow-lang');
+            if (!lang) return;
+            applyLang(lang);
+        });
+    });
+}
+
+function initReligionGuideTabs() {
+    const root = document.querySelector('[data-etiquette-guide]');
+    if (!root) return;
+
+    const parentTabs = root.querySelectorAll('[data-etiquette-parent]');
+    const childTabs = root.querySelectorAll('[data-etiquette-child]');
+    const panels = root.querySelectorAll('[data-etiquette-panel]');
+    const defaults = { religion: 'buddhist', country: 'korea' };
+    let activeParent = 'religion';
+    let activeChild = defaults.religion;
+
+    const setParent = (parentKey) => {
+        activeParent = parentKey;
+        parentTabs.forEach((tab) => {
+            const on = tab.getAttribute('data-etiquette-parent') === parentKey;
+            tab.classList.toggle('is-active', on);
+            tab.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+
+        const firstVisible = Array.from(childTabs).find(
+            (tab) => tab.getAttribute('data-parent') === parentKey
+        );
+        const preferred = defaults[parentKey] || firstVisible?.getAttribute('data-etiquette-child');
+        setChild(preferred || firstVisible?.getAttribute('data-etiquette-child'));
+    };
+
+    const setChild = (childKey) => {
+        if (!childKey) return;
+        activeChild = childKey;
+
+        childTabs.forEach((tab) => {
+            const parent = tab.getAttribute('data-parent');
+            const key = tab.getAttribute('data-etiquette-child');
+            const visible = parent === activeParent;
+            const on = visible && key === childKey;
+
+            if (visible) tab.removeAttribute('hidden');
+            else tab.setAttribute('hidden', '');
+
+            tab.classList.toggle('is-active', on);
+            tab.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+
+        panels.forEach((panel) => {
+            const on = panel.getAttribute('data-etiquette-panel') === childKey;
+            panel.classList.toggle('is-active', on);
+            if (on) panel.removeAttribute('hidden');
+            else panel.setAttribute('hidden', '');
+        });
+    };
+
+    parentTabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+            const key = tab.getAttribute('data-etiquette-parent');
+            if (key) setParent(key);
+        });
+    });
+
+    childTabs.forEach((tab) => {
+        tab.addEventListener('click', () => {
+            const key = tab.getAttribute('data-etiquette-child');
+            if (key) setChild(key);
+        });
+    });
+
+    setParent(activeParent);
+}

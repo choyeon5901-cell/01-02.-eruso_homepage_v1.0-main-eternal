@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="온라인 추모관, 부고 공유, 조문록, 사진과 영상 기록을 한곳에서 관리하는 디지털 추모 플랫폼">
+    <meta name="description" content="이루소는 사랑하는 이를 위한 디지털 추모의 자리입니다. 온라인 추모관·부고 공유·조문록·사진과 영상 기록을 한곳에서 관리하는 디지털 추모 플랫폼입니다.">
     <title>이루소 | 기억을 오래 머물게 하는 온라인 추모관</title>
-        <link rel="canonical" href="https://eruso.co.kr/" />
+    <link rel="canonical" href="https://eruso.co.kr/" />
+    <link rel="icon" href="public/favicon.ico" />
 
     <!-- Open Graph (eruso.co.kr) -->
     <meta property="og:type" content="website" />
@@ -13,85 +14,53 @@
     <meta property="og:locale" content="ko_KR" />
     <meta property="og:url" content="https://eruso.co.kr/" />
     <meta property="og:title" content="이루소 | 기억을 오래 머물게 하는 온라인 추모관" />
-    <meta property="og:description" content="온라인 추모관, 부고 공유, 조문록, 사진과 영상 기록을 한곳에서 관리하는 디지털 추모 플랫폼" />
+    <meta property="og:description" content="이루소는 사랑하는 이를 위한 디지털 추모의 자리입니다. 온라인 추모관·부고 공유·조문록·사진과 영상 기록을 한곳에서 관리하는 디지털 추모 플랫폼입니다." />
     <meta property="og:image" content="https://eruso.co.kr/images/memorial-hero-07.png" />
     <meta property="og:image:alt" content="이루소 — 온라인 디지털 추모관" />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="이루소 | 기억을 오래 머물게 하는 온라인 추모관" />
-    <meta name="twitter:description" content="온라인 추모관, 부고 공유, 조문록, 사진과 영상 기록을 한곳에서 관리하는 디지털 추모 플랫폼" />
+    <meta name="twitter:description" content="이루소는 사랑하는 이를 위한 디지털 추모의 자리입니다. 온라인 추모관·부고 공유·조문록·사진과 영상 기록을 한곳에서 관리하는 디지털 추모 플랫폼입니다." />
     <meta name="twitter:image" content="https://eruso.co.kr/images/memorial-hero-07.png" />
 
-    <link rel="icon" href="public/favicon.ico" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/memorial.css">
+    <link rel="stylesheet" href="css/memorial.css?v=20260809-plans-gap2">
     <!-- eternal_memory 연동 (로컬 호스트에서는 JS가 localhost로 자동 전환) -->
     <meta name="eruso-api-base" content="https://api.erum2026.co.kr">
     <meta name="eruso-app-base" content="https://erum2026.co.kr">
 
 </head>
-    <div id="popup-container" style="
-    position: fixed; 
-    top: 50%; left: 50%; transform: translate(-50%, -50%);
-    width: 1850px; height: 1500px; 
-    background: #0a0e1c; color: #fff; 
-    border: 2px solid #3b4266; border-radius: 20px;
-    overflow: hidden; font-family: 'Pretendard', sans-serif;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.8); z-index: 9999;
-    display: flex; flex-direction: column;">
-    
-        <div style="flex: 1; padding: 100px; display: flex; flex-direction: column; justify-content: center;">
-            <div style="
-        background: #00C8FF; 
-        color: #0A0E1C; 
-        padding: 10px 20px; 
-        display: block; 
-        margin: 0 auto 30px auto; 
-        border-radius: 40px; 
-        font-size: 30px; 
-        width: fit-content; 
-        text-align: center;
-    ">
-        <strong>시스템 점검</strong>
-    </div>
-        <h2 style="font-size: 80px; margin: 0 0 40px 0; font-weight: bold; text-align: center;">
-            이루소 <br>오픈 전 홈페이지 및 시스템 점검 안내
-        </h2>
-        <p style="
-            font-size: 32px; 
-            color: #00C8FF; 
-            line-height: 1.6; 
-            max-width: 1500px; 
-            text-align: center; 
-            margin: 0 auto;
-        ">
-            <strong>더 나은 서비스를 제공하기 위해 현재 시스템의 기능 고도화 작업을 진행 중입니다.</strong><br>
-            원활한 서비스 환경을 구축하기 위한 과정이오니 이용자 여러분 양해 부탁드립니다.
-        </p>
-    </div>
-</div>
+    <!-- 점검 팝업(비활성): 고정 1850px 폭이 모바일 가로 스크롤을 유발하므로 숨김 -->
+    <div id="popup-container" hidden aria-hidden="true" style="display:none;"></div>
     <nav class="navbar" aria-label="주요 메뉴">
         <div class="nav-inner">
             <a href="#home" class="nav-brand">
                 <img src="images/logo-eruso-final-02.png" alt="이루소 로고" class="nav-logo">
-                <span class="brand-service">추모관 | 기억을 오래 머무는 디지털 추모관</span>
             </a>
-            <ul class="nav-menu">
-                <li><a href="#about">소개</a></li>
-                <li><a href="#features">기능</a></li>
-                <li><a href="#memorial">추모관</a></li>
-                <li><a href="#columbarium">봉안당</a></li>
-                <li><a href="#process">절차</a></li>
-                <li><a href="#contact">문의</a></li>
+            <span class="brand-service">온라인 디지털 추모관</span>
+            <ul class="nav-menu" id="navMenu">
+                <li class="nav-menu-panel-head" aria-hidden="true">
+                    <div class="nav-menu-panel-title">메뉴</div>
+                    <span class="nav-menu-panel-sub">이루소 추모 서비스</span>
+                </li>
+                <li><a href="#about"><i class="fas fa-circle-info" aria-hidden="true"></i><span>소개</span></a></li>
+                <li><a href="#features"><i class="fas fa-puzzle-piece" aria-hidden="true"></i><span>기능</span></a></li>
+                <li><a href="#columbarium"><i class="fas fa-place-of-worship" aria-hidden="true"></i><span>장례 시설</span></a></li>
+                <li><a href="#funeral-guide"><i class="fas fa-book-open" aria-hidden="true"></i><span>장례 안내</span></a></li>
+                <li><a href="#religion-guide"><i class="fas fa-globe" aria-hidden="true"></i><span>다양한 장례 예절</span></a></li>
+                <li><a href="#workflow-guide"><i class="fas fa-circle-play" aria-hidden="true"></i><span>영상 안내</span></a></li>
+                <li><a href="#process"><i class="fas fa-user-plus" aria-hidden="true"></i><span>회원가입방법</span></a></li>
+                <li><a href="#cyber-apply"><i class="fas fa-list-ol" aria-hidden="true"></i><span>이용안내</span></a></li>
+                <li><a href="#cyber-apply"><i class="fas fa-envelope" aria-hidden="true"></i><span>문의</span></a></li>
             </ul>
             <div class="nav-right">
                 <a href="#memorial" class="nav-quick" data-nav-quick="memorial">
                     <i class="fas fa-heart"></i>
                     추모관 둘러보기
                 </a>
-                <a href="#contact" class="nav-cta">
+                <a href="#cyber-apply" class="nav-cta" data-service="온라인 추모관 개설">
                     <i class="fas fa-calendar-check"></i>
                     상담 신청
                 </a>
@@ -100,12 +69,34 @@
                 </button>
             </div>
         </div>
+        <div class="nav-drawer-backdrop" id="navDrawerBackdrop" hidden></div>
     </nav>
 
     <main>
         <section id="home" class="hero">
-            <img src="images/memorial-hero.png" alt="따뜻한 빛이 들어오는 디지털 추모 공간" class="hero-image">
+            <div class="hero-media" aria-hidden="true">
+                <video
+                    class="hero-video is-active"
+                    data-hero-video
+                    src="images/life-journey.mp4?v=20260808-eastasian"
+                    muted
+                    playsinline
+                    preload="auto"
+                    poster="images/memorial-hero-07.png"
+                ></video>
+                <div class="hero-slideshow is-waiting" data-hero-slideshow>
+                    <img src="images/memorial-hero-07.png" alt="" class="hero-image is-active" data-hero-slide>
+                    <img src="images/memorial-hero-08.png" alt="" class="hero-image" data-hero-slide>
+                    <img src="images/memorial-hero-01.png" alt="" class="hero-image" data-hero-slide>
+                    <img src="images/memorial-hero-02.png" alt="" class="hero-image" data-hero-slide>
+                    <img src="images/memorial-hero-03.png" alt="" class="hero-image" data-hero-slide>
+                    <img src="images/memorial-hero-04.png" alt="" class="hero-image" data-hero-slide>
+                    <img src="images/memorial-hero-05.png" alt="" class="hero-image" data-hero-slide>
+                    <img src="images/memorial-hero-06.png" alt="" class="hero-image" data-hero-slide>
+                </div>
+            </div>
             <div class="hero-overlay" aria-hidden="true"></div>
+            <!--<p class="hero-life-caption" data-hero-caption aria-hidden="true">태어남에서 기억으로</p>-->
             <div class="memory-flow" aria-hidden="true">
                 <span></span>
                 <span></span>
@@ -117,28 +108,40 @@
             <div class="container hero-grid">
                 <div class="hero-content">
                     <p class="eyebrow">
-                        <i class="fas fa-ribbon"></i>
-                        이루소 추모 서비스
+                        <!-- <i class="fas fa-ribbon"></i> -->
+                        <!-- 이루소 추모 서비스 -->
                     </p>
-                    <h1>그리움을 기록하고<br>함께 기억하는 온라인 추모관</h1>
-                    <p class="hero-copy">
+                    <h1 style="font-size: 160%;">그리움과 함께<br>기록하고 기억하는<br>온라인 추모관</h1>
+                    <p class="hero-copy" style="letter-spacing: 0;">
                         장례 안내부터 온라인 조문, 추모글, 사진과 영상 보관까지
                         가족이 편안하게 관리할 수 있는 디지털 추모 시스템입니다.
                     </p>
                     <div class="hero-actions">
-                        <a href="#contact" class="btn btn-primary main-action">
+                        <a href="#cyber-apply" class="btn btn-primary main-action" data-service="온라인 추모관 개설">
                             <i class="fas fa-hands-helping"></i>
                             추모관 개설 및 문의 상담
                         </a>
                         
                         <div class="btn-group-secondary">
-                            <a href="#memorial" class="btn btn-secondary">
-                                <i class="fas fa-eye"></i>
-                                추모관 보기
+                            <a href="#cyber-apply" class="btn btn-secondary" data-service="온라인 추모관 개설">
+                                <i class="fas fa-book-open" aria-hidden="true"></i>
+                                <span class="btn-label">이용안내</span>
+                            </a>
+                            <a href="#procedure" class="btn btn-secondary ghost">
+                                <i class="fas fa-list-ol" aria-hidden="true"></i>
+                                <span class="btn-label">이용절차</span>
+                            </a>
+                            <a href="#memorial" class="btn btn-secondary ghost">
+                                <i class="fas fa-eye" aria-hidden="true"></i>
+                                <span class="btn-label">추모관 보기</span>
                             </a>
                             <a href="#columbarium" class="btn btn-secondary ghost">
-                                <i class="fas fa-eye"></i>
-                                봉안당 보기
+                                <i class="fas fa-place-of-worship" aria-hidden="true"></i>
+                                <span class="btn-label">장례 시설</span>
+                            </a>
+                            <a id="heroJesaTrialLink" href="https://erum2026.co.kr/service-select?mode=trial" class="btn btn-secondary ghost" target="_blank" rel="noopener">
+                                <i class="fas fa-yin-yang" aria-hidden="true"></i>
+                                <span class="btn-label">온라인 제사당 무료체험</span>
                             </a>
                         </div>
                     </div>
@@ -158,49 +161,57 @@
                     </div>
                 
                 </div> <aside class="hero-panel" aria-label="추모관 요약">
-                    <div class="panel-top">
+                    <div class="panel-top";>
                         <span class="status-dot"></span>
-                        추모관 운영 중
+                        <span style="align-self: center;">추모관 운영 중</span>
                     </div>
                     <div class="memorial-profile">
                         <div class="portrait" aria-hidden="true">追</div>
-                        <div>
-                            <p class="profile-label">온라인 추모관</p>
-                            <h2>고인을 기억하는 공간</h2>
-                            <p>가족이 승인한 사진, 영상, 생애 기록만 정중하게 공개됩니다.</p>
+                        <!-- line-height: 1.2를 추가하여 문장 자체의 줄 간격을 줄임 -->
+                        <div style="text-shadow: none; line-height: 1.2;">
+                            
+                            <!-- margin: 0을 주어 기본 여백을 완전히 제거 -->
+                            <p class="profile-label" style="margin: 8px 0;">온라인 추모관</p>
+                            
+                            <!-- 위아래 여백을 4px로 줄임 (기본값은 보통 20px 이상임) -->
+                            <h2 style="margin: 4px 0;">고인을 기억하는 공간</h2>
+                            
+                            <!-- 여기도 margin: 0 추가 -->
+                            <p style="text-shadow: none; font-size: 13px; margin: 0;">가족이 승인한 사진, 영상, 생애 기록만<br>정중하게 공개됩니다.</p>
+                            
                         </div>
-                    </div>
-                    <div class="tribute-list" aria-label="추모 반응">
-                        <button type="button" class="tribute-action" data-tribute="flower" data-label="헌화" aria-label="헌화하기">
+                        </div>
+                    <div class="tribute-stats-block">
+                        <h3 class="tribute-stats-title">
+                            오늘의 추모 통계
+                            <span class="tribute-stats-sub">(마음을 전한 마음)</span>
+                        </h3>
+                        <div class="tribute-list" aria-label="추모 통계">
+                        <div class="tribute-stat" data-stat="candle">
+                            <i class="fas fa-fire"></i>
+                            <span><strong data-count="candle">0</strong><em>촛불켜기</em></span>
+                        </div>
+                        <div class="tribute-stat" data-stat="incense">
+                            <i class="fas fa-wind"></i>
+                            <span><strong data-count="incense">0</strong><em>향 올리기</em></span>
+                        </div>
+                        <div class="tribute-stat" data-stat="flower">
+                            <i class="fas fa-seedling"></i>
+                            <span><strong data-count="flower">0</strong><em>꽃 바치기</em></span>
+                        </div>
+                        <div class="tribute-stat" data-stat="offering">
                             <i class="fas fa-spa"></i>
-                            <span><strong data-count="flower">128</strong><em>헌화</em></span>
-                        </button>
-                        <button type="button" class="tribute-action" data-tribute="message" data-label="추모글" aria-label="추모글 공감하기">
-                            <i class="fas fa-pen-nib"></i>
-                            <span><strong data-count="message">46</strong><em>추모글</em></span>
-                        </button>
-                        <button type="button" class="tribute-action" data-tribute="visit" data-label="방문기록" aria-label="방문 기록 남기기">
-                            <i class="fas fa-shoe-prints"></i>
-                            <span><strong data-count="visit">84</strong><em>방문기록</em></span>
-                        </button>
-                    </div>
-                    <button type="button" class="message-open" aria-label="메시지 남김" aria-expanded="false" aria-controls="quickMessage">
-                        <i class="fas fa-comment-dots"></i>
-                        <span>메시지 남김</span>
-                    </button>
-                    <form class="quick-message" id="quickMessage" aria-label="추모 메시지 남기기">
-                        <label for="quickMessageText">추모 메시지</label>
-                        <textarea id="quickMessageText" rows="3" maxlength="80" placeholder="짧은 추모의 마음을 남겨주세요."></textarea>
-                        <div class="quick-message-actions">
-                            <button type="button" class="quick-message-close">닫기</button>
-                            <button type="submit">남기기</button>
+                            <span><strong data-count="offering">0</strong><em>헌화</em></span>
                         </div>
-                    </form>
-                    <div class="memory-notes" aria-label="추모 메시지 예시">
-                        <p>
-                            <span class="memory-note-time">방금 전</span>
-                            <strong class="memory-note-text">함께한 시간을 오래 기억하겠습니다.</strong>
-                        </p>
+                        <div class="tribute-stat" data-stat="messages">
+                            <i class="fas fa-pen-nib"></i>
+                            <span><strong data-count="messages">0</strong><em>추모글</em></span>
+                        </div>
+                        <div class="tribute-stat" data-stat="visits">
+                            <i class="fas fa-shoe-prints"></i>
+                            <span><strong data-count="visits">0</strong><em>방문기록</em></span>
+                        </div>
+                        </div>
                     </div>
                 </aside>
             </div>
@@ -214,32 +225,32 @@
                         Service Overview
                     </p>
                     <h2>장례 이후에도 이어지는 품격 있는 기억 관리</h2>
-                    <p>
+                    <p style="letter-spacing: -0.7px;">
                         이루소 추모 시스템은 갑작스러운 순간에도 부고와 장례 일정을 빠르게 공유하고,
-                        멀리 있는 지인도 온라인으로 조문할 수 있도록 돕습니다. 남겨진 사진과 이야기는
-                        가족 승인 기반으로 보존되어 시간이 지나도 안전하게 다시 꺼내볼 수 있습니다.
+                        멀리 있는 지인도 온라인으로 조문할 수 있도록 돕습니다. <br>남겨진 사진과 이야기는
+                        가족 승인 기반으로 보존되어 시간이 지나도 <br>안전하게 다시 꺼내볼 수 있습니다.
                     </p>
                 </div>
                 <div class="about-grid">
                     <article class="about-card">
                         <i class="fas fa-bell"></i>
                         <h3>부고 안내</h3>
-                        <p>문자, 링크, QR로 장례식장 위치와 일정을 간편하게 공유합니다.</p>
+                        <p style="letter-spacing: -0.7px;">문자, 링크, QR로 장례식장 위치와 일정을 간편하게 공유합니다.</p>
                     </article>
                     <article class="about-card">
                         <i class="fas fa-book-open"></i>
                         <h3>생애 기록</h3>
-                        <p>사진, 영상, 약력, 가족 메시지를 한 화면에서 정돈합니다.</p>
+                        <p style="letter-spacing: -1.0px;">사진, 영상, 약력, 가족 메시지를 한 화면에서 정돈합니다.</p>
                     </article>
                     <article class="about-card">
                         <i class="fas fa-lock"></i>
                         <h3>가족 관리</h3>
-                        <p>공개 범위와 게시 승인 권한을 가족 중심으로 세밀하게 설정합니다.</p>
+                        <p style="letter-spacing: -1.2px;">공개 범위와 게시 승인 권한을 가족 중심으로<br> 세밀하게 설정합니다.</p>
                     </article>
                     <article class="about-card">
                         <i class="fas fa-comments"></i>
                         <h3>온라인 조문</h3>
-                        <p>방문이 어려운 분도 추모글과 마음을 남길 수 있습니다.</p>
+                        <p>방문이 어려운 분도 추모글과 마음을 <br>남길 수 있습니다.</p>
                     </article>
                 </div>
             </div>
@@ -268,13 +279,13 @@
                     </article>
                     <article class="feature-card">
                         <div class="feature-icon"><i class="fas fa-hand-holding-heart"></i></div>
-                        <h3>헌화와 조문록</h3>
-                        <p>온라인 헌화, 추모 메시지, 비공개 가족 메시지를 상황에 맞게 받을 수 있습니다.</p>
+                        <h3>헌화와 추모록</h3>
+                        <p>온라인 헌화, 추모 메시지를 상황에 맞게 받을 수 있습니다.</p>
                     </article>
                     <article class="feature-card">
                         <div class="feature-icon"><i class="fas fa-photo-film"></i></div>
                         <h3>앨범과 영상 보관</h3>
-                        <p>가족이 남기고 싶은 순간을 고화질 이미지와 영상으로 정리해 보존합니다.</p>
+                        <p style="letter-spacing: -0.7px;">가족이 남기고 싶은 순간을 고화질 이미지와 영상으로 정리해 보존합니다.</p>
                     </article>
                     <article class="feature-card">
                         <div class="feature-icon"><i class="fas fa-user-lock"></i></div>
@@ -284,7 +295,7 @@
                     <article class="feature-card">
                         <div class="feature-icon"><i class="fas fa-headset"></i></div>
                         <h3>운영 지원</h3>
-                        <p>개설 상담부터 자료 등록, 문구 정리, 장례 후 보존까지 담당자가 도와드립니다.</p>
+                        <p style="letter-spacing: -0.7px;">개설 상담부터 자료 등록, 문구 정리, 장례 후 보존까지 담당자가 도와드립니다.</p>
                     </article>
                 </div>
             </div>
@@ -344,6 +355,7 @@
                             <li><i class="fas fa-check"></i> 조문 메시지 승인, 숨김, 보관 기능</li>
                             <li><i class="fas fa-check"></i> 장례식장 위치와 일정 공유</li>
                             <li><i class="fas fa-check"></i> 추모 영상, 가족 인사말, 감사 인사 게시</li>
+                            <li><i class="fas fa-check"></i> 온라인 제사 서비스, 영상기능, 대화기능, 특징별(지역, 종교, 국가) 추모 제사 서비스</li>
                         </ul>
                     </div>
                 </div><!-- /.memorial-layout -->
@@ -376,8 +388,63 @@
         </section>
         <section id="columbarium" class="section columbarium-section">
             <div class="container columbarium-layout">
-                
-                <!-- ─── 봉안당 뷰어 (서버 불필요, 순수 Canvas) ─── -->
+                <div class="section-header">
+                    <p class="eyebrow dark">
+                        <i class="fas fa-place-of-worship"></i>
+                        Columbarium
+                    </p>
+                    <h2>장례 시설 · 추모공원 둘러보기</h2>
+                    <p>지역과 키워드로 시설을 찾은 뒤, 배치도를 확인할 수 있습니다.</p>
+                </div>
+
+                <!-- 봉안당/추모공원 검색 (eternal_memory API) -->
+                <div id="columbarium-browse" class="columb-search" aria-label="봉안당 검색">
+                    <div class="columb-search__head">
+                        <div>
+                            <h3 class="columb-search__title">시설 검색</h3>
+                            <p class="columb-search__sub">국립묘지 · 장례식장/추모공원 공공데이터 연동</p>
+                        </div>
+                        <div class="columb-search__filters">
+                            <select id="columbCat" aria-label="시설 구분">
+                                <option value="all">전체</option>
+                                <option value="cemetery">국립묘지</option>
+                                <option value="funeral">장례식장·추모공원</option>
+                            </select>
+                            <select id="columbRegion" aria-label="시도">
+                                <option value="">시도 전체</option>
+                            </select>
+                            <label class="columb-search__input" aria-label="시설명 검색">
+                                <i class="fas fa-magnifying-glass"></i>
+                                <input id="columbKeyword" type="search" placeholder="시설명 · 주소 검색" autocomplete="off" />
+                            </label>
+                            <button id="columbSearchBtn" type="button" class="btn btn-secondary" style="white-space:nowrap;">
+                                <i class="fas fa-search"></i>
+                                검색
+                            </button>
+                        </div>
+                    </div>
+                    <div id="columbSearchStatus" class="columb-search__status" aria-live="polite">시설명·주소 또는 시도를 선택한 뒤 검색해 주세요.</div>
+                    <div id="columbSearchList" class="columb-search__list" role="list"></div>
+                    <p class="columb-search__foot">
+                        더 자세한 검색은 이루소 앱에서 이용할 수 있습니다.
+                        <a id="columbAppFuneral" href="https://erum2026.co.kr/funeral-facility" target="_blank" rel="noopener">장례식장·추모공원</a>
+                        ·
+                        <a id="columbAppCemetery" href="https://erum2026.co.kr/national-cemetery" target="_blank" rel="noopener">국립묘지</a>
+                    </p>
+                </div>
+
+                <!-- 선택 시설 요약 -->
+                <div id="columbSelected" class="columb-selected" hidden>
+                    <div class="columb-selected__main">
+                        <span class="columb-selected__badge" id="columbSelectedBadge">선택됨</span>
+                        <strong id="columbSelectedName">—</strong>
+                        <span id="columbSelectedMeta" class="columb-selected__meta"></span>
+                        <div id="columbSelectedLinks" class="columb-selected__links"></div>
+                    </div>
+                    <button type="button" id="columbClearSelect" class="columb-selected__clear">선택 해제</button>
+                </div>
+
+                <!-- ─── 봉안당 뷰어 ─── -->
                 <div class="columbarium-viewer" id="columbariumSection">
                     <div class="columb-toolbar">
                         <div class="columb-zone-tabs" id="columbZoneTabs">
@@ -397,15 +464,569 @@
                             <span class="columb-legend-dot selected"></span>선택됨
                         </div>
                     </div>
+                    <p id="columbFacilityLabel" class="columb-facility-label">시설을 선택하면 해당 봉안당 배치도가 표시됩니다.</p>
                     <canvas id="columbariumCanvas" width="900" height="520" style="width:100%;border-radius:12px;cursor:pointer;display:block;" aria-label="봉안당 배치도"></canvas>
                     <div class="columb-info-panel" id="columbInfoPanel" style="display:none">
                         <div id="columbInfoContent"></div>
                         <button class="columb-info-close" id="columbInfoClose" aria-label="닫기">✕</button>
                     </div>
-                    <p class="columb-hint">칸을 클릭하면 상세 정보를 확인할 수 있습니다.</p>
+                    <p class="columb-hint">칸을 클릭하면 상세 정보를 확인할 수 있습니다. (배치 현황은 데모 데이터입니다)</p>
                 </div>
             </div>
         </section>
+        </section>
+
+        <section id="funeral-guide" class="section funeral-guide-section">
+            <div class="container">
+                <div class="section-header">
+                    <p class="eyebrow dark">
+                        <i class="fas fa-book-open"></i>
+                        Funeral Guide
+                    </p>
+                    <h2>대한민국 표준 장례 절차 안내</h2>
+                    <p>
+                        유가족이 경황이 없는 상태에서도 차분하게 장례를 준비하고 진행할 수 있도록,
+                        <br>대한민국 기준의 표준 장례 절차와 체크리스트를 정리했습니다.
+                    </p>
+                </div>
+
+                <div class="funeral-guide-intro">
+                    <p style="text-align: center;">
+                        아래 안내는 <strong>3일장</strong>을 기준으로 합니다. <br>실제 일정은 장례식장·종교·지역 관례에 따라
+                        <b style="color: crimson;">달라질 수 있으니</b>, 상조·장례식장 담당자와 함께 확인하시기 바랍니다.
+                    </p>
+                </div>
+
+                <h3 class="funeral-guide-subtitle">
+                    <i class="fas fa-calendar-days"></i>
+                    단계별 장례 진행 절차 (3일장 기준)
+                </h3>
+
+                <div class="funeral-day-grid">
+                    <article class="funeral-day-card">
+                        <header class="funeral-day-card__head"; style="text-align: center;">
+                            <span class="funeral-day-card__day"; style="color: aliceblue;">1일 차</span>
+                            <h4>장례의 시작 <em>임종 및 빈소 설치</em></h4>
+                        </header>
+                        <ul class="funeral-day-card__list">
+                            <li>
+                                <strong>사망 진단서(또는 시체검안서) 발급</strong>
+                                <span>병원·임종 장소에서 발급. 화장장 예약·사망 신고에 필요하므로 여러 장 복사해 두세요.</span>
+                            </li>
+                            <li>
+                                <strong>장례식장 선정 및 안치</strong>
+                                <span>장례식장을 예약하고 고인을 영안실(안치실)에 모십니다.</span>
+                            </li>
+                            <li>
+                                <strong>상주 및 유족 상의</strong>
+                                <span>3일장·화장/매장 등 방법을 결정하고 상주를 확정합니다.</span>
+                            </li>
+                            <li>
+                                <strong>빈소 차림 및 상복 착용</strong>
+                                <span>빈소를 차리고 유족은 상복(검은 정장·한복 등)으로 갈아입습니다.</span>
+                            </li>
+                            <li>
+                                <strong>부고 알림</strong>
+                                <span>친지·지인·직장에 부고 문자·링크를 발송합니다.</span>
+                            </li>
+                        </ul>
+                    </article>
+
+                    <article class="funeral-day-card">
+                        <header class="funeral-day-card__head"; style="text-align: center;">
+                            <span class="funeral-day-card__day"; style="color: aliceblue;">2일 차</span>
+                            <h4 style="letter-spacing: 0px;">조문 받기 <em>및 입관식</em></h4>
+                        </header>
+                        <ul class="funeral-day-card__list">
+                            <li>
+                                <strong>조문객 맞이</strong>
+                                <span>본격적으로 조문객을 맞이하고 조의를 받습니다.</span>
+                            </li>
+                            <li>
+                                <strong>입관식</strong>
+                                <span style="letter-spacing: 0.1px;">보통 2일 차 오전. 유족 입회하에 수의를 입혀 관에 모시고, 입관 후 성복례를 올립니다.</span>
+                            </li>
+                            <li>
+                                <strong>사망 신고</strong>
+                                <span style="letter-spacing: 0px;">주민센터 방문 또는 온라인(e-하늘 장사정보시스템)으로 진행합니다.</span>
+                            </li>
+                            <li>
+                                <strong>화장장 예약</strong>
+                                <span>e-하늘 장사정보시스템에서 예약. 보통 3일 차 화장에 맞춰 잡습니다.</span>
+                            </li>
+                        </ul>
+                    </article>
+
+                    <article class="funeral-day-card">
+                        <header class="funeral-day-card__head"; style="text-align: center;">
+                            <span class="funeral-day-card__day"; style="color: aliceblue;">3일 차</span>
+                            <h4>발인 및 <em>장지 이동</em></h4>
+                        </header>
+                        <ul class="funeral-day-card__list">
+                            <li>
+                                <strong>발인(출관)</strong>
+                                <span>빈소를 정리하고 고인을 운구하여 장지로 떠납니다.</span>
+                            </li>
+                            <li>
+                                <strong>운구 및 이동</strong>
+                                <span>영구차(리무진/버스)로 화장장 또는 묘지로 이동합니다.</span>
+                            </li>
+                            <li>
+                                <strong>화장 및 봉안(매장)</strong>
+                                <span>화장 후 봉안당·수목장·자연장 등에 안치하거나, 매장 묘소에 모십니다.</span>
+                            </li>
+                            <li>
+                                <strong>삼우제(또는 탈상)</strong>
+                                <span>장례 후 3일째(또는 편한 날) 묘·봉안당을 찾아 예를 올립니다.</span>
+                            </li>
+                        </ul>
+                    </article>
+                </div>
+
+                <div class="funeral-check-grid">
+                    <article class="funeral-check-card">
+                        <h3 class="funeral-guide-subtitle funeral-guide-subtitle--inline">
+                            <i class="fas fa-suitcase"></i>
+                            장례 준비 체크리스트
+                        </h3>
+                        <ul class="funeral-check-list">
+                            <li><strong>서류</strong> — 사망진단서 원본, 주민등록등본(행정 처리용)</li>
+                            <li><strong>물품·비용</strong> — 상복, 부의록, 봉투, 도장, 신용카드(정산용)</li>
+                            <li><strong>도움 요청</strong> — 장례 도우미(상조 인력), 운구 인원 4~6명 섭외</li>
+                        </ul>
+                    </article>
+                    <article class="funeral-check-card funeral-check-card--link">
+                        <h3 class="funeral-guide-subtitle funeral-guide-subtitle--inline">
+                            <i class="fas fa-link"></i>
+                            참고 사이트
+                        </h3>
+                        <ul class="funeral-check-list">
+                            <li>
+                                <a href="https://www.ehaneul.go.kr/" target="_blank" rel="noopener">
+                                    e-하늘 장사정보시스템
+                                </a>
+                                — 사망신고·화장 예약
+                            </li>
+                            <li>장례식장·상조 담당자와 일정·비용을 미리 확인하세요.</li>
+                        </ul>
+                    </article>
+                </div>
+
+                <div class="erum-flow-block">
+                    <div class="erum-flow-block__copy">
+                        <p class="eyebrow dark"><i class="fas fa-mobile-screen"></i> Digital Funeral</p>
+                        <h3>이루소 디지털 장례 연계</h3>
+                        <p>
+                            표준 장례 절차 위에, 모바일 부고장부터 장례 후 답례까지
+                            온라인으로 이어지는 흐름을 준비해 두었습니다.
+                        </p>
+                    </div>
+                    <ol class="erum-flow" aria-label="디지털 장례 서비스 흐름">
+                        <li class="erum-flow__step">
+                            <span class="erum-flow__num">1</span>
+                            <i class="fas fa-envelope-open-text" aria-hidden="true"></i>
+                            <strong>모바일 부고장 발송</strong>
+                            <p>부고 문구·QR·일정 안내를 카톡·문자로 전달</p>
+                        </li>
+                        <li class="erum-flow__arrow" aria-hidden="true"><i class="fas fa-angles-right"></i></li>
+                        <li class="erum-flow__step">
+                            <span class="erum-flow__num">2</span>
+                            <i class="fas fa-hand-holding-heart" aria-hidden="true"></i>
+                            <strong>실시간 조문·방명록</strong>
+                            <p>방문이 어려운 분도 추모글·헌화로 조의를 전함</p>
+                        </li>
+                        <li class="erum-flow__arrow" aria-hidden="true"><i class="fas fa-angles-right"></i></li>
+                        <li class="erum-flow__step">
+                            <span class="erum-flow__num">3</span>
+                            <i class="fas fa-map-location-dot" aria-hidden="true"></i>
+                            <strong>장지 길찾기</strong>
+                            <p>장례식장·화장장·봉안당 위치와 이동 안내</p>
+                        </li>
+                        <li class="erum-flow__arrow" aria-hidden="true"><i class="fas fa-angles-right"></i></li>
+                        <li class="erum-flow__step">
+                            <span class="erum-flow__num">4</span>
+                            <i class="fas fa-heart" aria-hidden="true"></i>
+                            <strong>장례 후 답례 인사</strong>
+                            <p>추모관·메시지로 감사 인사와 기억을 이어감</p>
+                        </li>
+                    </ol>
+                    <div class="erum-flow__actions">
+                        <a href="#cyber-apply" class="btn btn-primary" data-service="디지털 부고장·추모관 연계">
+                            <i class="fas fa-comments"></i>
+                            디지털 장례 상담 신청
+                        </a>
+                        <a href="#features" class="btn btn-secondary">
+                            <i class="fas fa-qrcode"></i>
+                            부고 QR·추모관 기능 보기
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="religion-guide" class="section religion-guide-section">
+            <div class="container">
+                <div class="section-header">
+                    <p class="eyebrow dark">
+                        <i class="fas fa-globe"></i>
+                        Funeral Etiquette
+                    </p>
+                    <h2>다양한 장례 예절 안내</h2>
+                    <p>
+                        종교별·국가별 상위 분류와 하위 세부 예절로 구성했습니다.
+                        한국을 비롯해 미국·중국·일본·인도·유럽의 장례 문화와
+                        불교·천주교·개신교 예절을 함께 안내합니다.
+                    </p>
+                </div>
+
+                <div class="etiquette-guide" data-etiquette-guide>
+                    <div class="etiquette-parent-tabs" role="tablist" aria-label="예절 상위 분류">
+                        <button type="button" class="etiquette-parent-tab is-active" role="tab" aria-selected="true" data-etiquette-parent="religion">종교별</button>
+                        <button type="button" class="etiquette-parent-tab" role="tab" aria-selected="false" data-etiquette-parent="country">국가별</button>
+                    </div>
+
+                    <div class="religion-tabs etiquette-child-tabs" role="tablist" aria-label="예절 하위 분류" data-etiquette-children>
+                        <button type="button" class="religion-tab is-active" role="tab" aria-selected="true" data-etiquette-child="buddhist" data-parent="religion">불교</button>
+                        <button type="button" class="religion-tab" role="tab" aria-selected="false" data-etiquette-child="catholic" data-parent="religion">천주교</button>
+                        <button type="button" class="religion-tab" role="tab" aria-selected="false" data-etiquette-child="protestant" data-parent="religion">개신교</button>
+                        <button type="button" class="religion-tab" role="tab" aria-selected="false" data-etiquette-child="korea" data-parent="country" hidden>한국</button>
+                        <button type="button" class="religion-tab" role="tab" aria-selected="false" data-etiquette-child="usa" data-parent="country" hidden>미국</button>
+                        <button type="button" class="religion-tab" role="tab" aria-selected="false" data-etiquette-child="china" data-parent="country" hidden>중국</button>
+                        <button type="button" class="religion-tab" role="tab" aria-selected="false" data-etiquette-child="japan" data-parent="country" hidden>일본</button>
+                        <button type="button" class="religion-tab" role="tab" aria-selected="false" data-etiquette-child="india" data-parent="country" hidden>인도</button>
+                        <button type="button" class="religion-tab" role="tab" aria-selected="false" data-etiquette-child="europe" data-parent="country" hidden>유럽</button>
+                    </div>
+
+                    <div class="religion-panels">
+                        <article class="religion-panel is-active" id="etiquette-buddhist" data-etiquette-panel="buddhist" data-parent="religion">
+                            <figure class="religion-panel__visual">
+                                <img src="images/etiquette/etiquette-buddhist.jpg?v=1" alt="불교 장례 예절 일러스트" width="1200" height="675" loading="lazy" decoding="async">
+                            </figure>
+                            <header class="religion-panel__head">
+                                <span class="religion-panel__badge">종교별 · 불교</span>
+                                <h3>천도재와 극락왕생을 기원하는 장례</h3>
+                            </header>
+                            <p class="religion-panel__feature">
+                                <strong>특징</strong>
+                                영혼의 극락왕생과 윤회를 기원하는 <em>천도재</em> 등이 중심이 되며,
+                                살생을 금하는 교리에 따라 상차림·식사에 어육류를 엄격히 배제합니다.
+                            </p>
+                            <h4 class="religion-panel__sub">조문 및 참관 예절</h4>
+                            <ul class="religion-panel__list">
+                                <li>
+                                    <strong>분향 및 헌화</strong>
+                                    <span>영정 앞에 다가가 향을 1개(또는 3개) 피우거나 국화를 올립니다.</span>
+                                </li>
+                                <li>
+                                    <strong>절과 합장</strong>
+                                    <span>전통적인 큰절을 두 번 올리거나, 합장 묵념으로 예를 표합니다.</span>
+                                </li>
+                                <li>
+                                    <strong>염불과 독경</strong>
+                                    <span>스님의 독경 소리에 맞춰 고인의 극락왕생을 염불하며 마음을 다스립니다.</span>
+                                </li>
+                            </ul>
+                        </article>
+
+                        <article class="religion-panel" id="etiquette-catholic" data-etiquette-panel="catholic" data-parent="religion" hidden>
+                            <figure class="religion-panel__visual">
+                                <img src="images/etiquette/etiquette-catholic.jpg?v=1" alt="천주교 장례 예절 일러스트" width="1200" height="675" loading="lazy" decoding="async">
+                            </figure>
+                            <header class="religion-panel__head">
+                                <span class="religion-panel__badge">종교별 · 천주교</span>
+                                <h3>위령다례·위령기도로 드리는 예</h3>
+                            </header>
+                            <p class="religion-panel__feature">
+                                <strong>특징</strong>
+                                죽음을 끝이 아닌 부활의 문으로 보며, 조상을 숭배의 대상이 아니라
+                                기억하고 연단에 있는 영혼을 위해 기도하는 대상으로 여깁니다.
+                            </p>
+                            <h4 class="religion-panel__sub">조문 및 참관 예절</h4>
+                            <ul class="religion-panel__list">
+                                <li>
+                                    <strong>성호 긋기 및 묵례</strong>
+                                    <span>영정 앞에 서서 성호를 긋고 깊은 목례나 가톨릭식 절을 합니다. 향은 생략하고 촛불·꽃으로 대체하는 경우도 많습니다.</span>
+                                </li>
+                                <li>
+                                    <strong>위령기도 참여</strong>
+                                    <span>유족과 조문객이 함께 고인의 영원한 안식을 구하는 위령기도를 바칩니다.</span>
+                                </li>
+                                <li>
+                                    <strong>지방 미사용</strong>
+                                    <span>종이 지방·위패 대신 영정 사진과 십자가, 초를 배치합니다.</span>
+                                </li>
+                            </ul>
+                        </article>
+
+                        <article class="religion-panel" id="etiquette-protestant" data-etiquette-panel="protestant" data-parent="religion" hidden>
+                            <figure class="religion-panel__visual">
+                                <img src="images/etiquette/etiquette-protestant.jpg?v=1" alt="개신교 장례 예절 일러스트" width="1200" height="675" loading="lazy" decoding="async">
+                            </figure>
+                            <header class="religion-panel__head">
+                                <span class="religion-panel__badge">종교별 · 개신교</span>
+                                <h3>추도예배로 드리는 예</h3>
+                            </header>
+                            <p class="religion-panel__feature">
+                                <strong>특징</strong>
+                                조상에게 절을 하거나 제사상을 차리는 전통 예식 대신,
+                                하나님께 예배를 드리고 유족을 위로하는 <em>추도예배</em>로 진행됩니다.
+                            </p>
+                            <h4 class="religion-panel__sub">조문 및 참관 예절</h4>
+                            <ul class="religion-panel__list">
+                                <li>
+                                    <strong>향과 절 금지</strong>
+                                    <span>향을 피우거나 영정 앞에 큰절을 하지 않습니다. 헌화(국화)나 묵념으로 애도합니다.</span>
+                                </li>
+                                <li>
+                                    <strong>추도예배 참여</strong>
+                                    <span>빈소·예배실에서 찬송, 성경 봉독, 유족 위로 기도로 이루어지는 예배에 함께합니다.</span>
+                                </li>
+                                <li>
+                                    <strong>상차림 미설치</strong>
+                                    <span>제사상·음식상은 차리지 않으며, 식사 교제 테이블만 간소하게 운영됩니다.</span>
+                                </li>
+                            </ul>
+                        </article>
+
+                        <article class="religion-panel" id="etiquette-korea" data-etiquette-panel="korea" data-parent="country" hidden>
+                            <figure class="religion-panel__visual">
+                                <img src="images/etiquette/etiquette-korea.jpg?v=1" alt="한국 장례 예절 일러스트" width="1200" height="675" loading="lazy" decoding="async">
+                            </figure>
+                            <header class="religion-panel__head">
+                                <span class="religion-panel__badge">국가별 · 한국</span>
+                                <h3>전통 장례 예절</h3>
+                            </header>
+                            <ul class="religion-panel__list">
+                                <li>
+                                    <strong>삼일장 및 절차</strong>
+                                    <span>임종 후 3일 동안 장례를 치르며(3일장), 빈소 마련 → 조문객 맞이 → 입관식 → 발인 → 화장 또는 매장 순으로 진행됩니다.</span>
+                                </li>
+                                <li>
+                                    <strong>조문 및 참합 예절</strong>
+                                    <span>영정 앞에 헌화 또는 분향을 하고, 고인에게 큰절을 두 번 올린 뒤 상주와 맞절(목례)을 하며 위로의 말을 건넵니다.</span>
+                                </li>
+                                <li>
+                                    <strong>종교별 차이</strong>
+                                    <span>유교 전통 제사 외에도 불교(천도재·어육류 배제), 천주교(위령다례·기도), 개신교(추도예배·향과 절 생략) 등 종교에 따라 예식 형태가 달라집니다.</span>
+                                </li>
+                            </ul>
+                        </article>
+
+                        <article class="religion-panel" id="etiquette-usa" data-etiquette-panel="usa" data-parent="country" hidden>
+                            <figure class="religion-panel__visual">
+                                <img src="images/etiquette/etiquette-usa.jpg?v=1" alt="미국 장례 예절 일러스트" width="1200" height="675" loading="lazy" decoding="async">
+                            </figure>
+                            <header class="religion-panel__head">
+                                <span class="religion-panel__badge">국가별 · 미국</span>
+                                <h3>추모 중심의 장례 예절</h3>
+                            </header>
+                            <ul class="religion-panel__list">
+                                <li>
+                                    <strong>추모 중심의 문화</strong>
+                                    <span>제사상보다 고인의 삶을 기리는 추모식(Memorial Service)과 장례식(Funeral)이 중심이 됩니다.</span>
+                                </li>
+                                <li>
+                                    <strong>조문 및 복장</strong>
+                                    <span>관을 열어 마지막 인사를 나누는 뷰잉(Viewing/Wake)이 흔합니다. 단정한 정장이 원칙이나, 고인 성향에 따라 밝고 편안한 복장을 권장하기도 합니다.</span>
+                                </li>
+                                <li>
+                                    <strong>위로와 조의</strong>
+                                    <span>유가족에게 조화나 기부금을 전하고, 장례 후 웨이크(Wake) 식사 모임으로 고인을 추억합니다.</span>
+                                </li>
+                            </ul>
+                        </article>
+
+                        <article class="religion-panel" id="etiquette-china" data-etiquette-panel="china" data-parent="country" hidden>
+                            <figure class="religion-panel__visual">
+                                <img src="images/etiquette/etiquette-china.jpg?v=1" alt="중국 장례 예절 일러스트" width="1200" height="675" loading="lazy" decoding="async">
+                            </figure>
+                            <header class="religion-panel__head">
+                                <span class="religion-panel__badge">국가별 · 중국</span>
+                                <h3>공양과 성묘의 장례 예절</h3>
+                            </header>
+                            <ul class="religion-panel__list">
+                                <li>
+                                    <strong>화려한 공양과 성묘</strong>
+                                    <span>유교·민간신앙의 영향으로 조상 숭배가 깊으며, 주로 낮에 의식을 치릅니다.</span>
+                                </li>
+                                <li>
+                                    <strong>지전(紙錢) 태우기</strong>
+                                    <span>저승에서 쓸 수 있도록 가짜 돈·종이 생활용품을 태우는 화행(火行) 의식이 동반됩니다.</span>
+                                </li>
+                                <li>
+                                    <strong>부조금 문화</strong>
+                                    <span>흰색 봉투 대신 축복과 부를 상징하는 붉은색 봉투(홍포)에 부조금을 담아 전달합니다.</span>
+                                </li>
+                            </ul>
+                        </article>
+
+                        <article class="religion-panel" id="etiquette-japan" data-etiquette-panel="japan" data-parent="country" hidden>
+                            <figure class="religion-panel__visual">
+                                <img src="images/etiquette/etiquette-japan.jpg?v=1" alt="일본 장례 예절 일러스트" width="1200" height="675" loading="lazy" decoding="async">
+                            </figure>
+                            <header class="religion-panel__head">
+                                <span class="religion-panel__badge">국가별 · 일본</span>
+                                <h3>불교·신도와 오봉의 예절</h3>
+                            </header>
+                            <ul class="religion-panel__list">
+                                <li>
+                                    <strong>불교와 신도의 결합</strong>
+                                    <span>대다수 장례가 불교식으로 치러지며, 화장률이 매우 높아 화장 후 유골을 납골당·묘에 모십니다.</span>
+                                </li>
+                                <li>
+                                    <strong>오봉(お盆) 풍습</strong>
+                                    <span>매년 여름 조상 영혼을 맞이·보내는 오봉에 성묘하고 불을 피워 길을 안내하는 의식을 치릅니다.</span>
+                                </li>
+                                <li>
+                                    <strong>부조금(고덴) 예절</strong>
+                                    <span>검·흰 물줄이 그려진 고덴부쿠로에 돈을 넣으며, 금액과 자필 기재에 엄격한 예절이 있습니다.</span>
+                                </li>
+                            </ul>
+                        </article>
+
+                        <article class="religion-panel" id="etiquette-india" data-etiquette-panel="india" data-parent="country" hidden>
+                            <figure class="religion-panel__visual">
+                                <img src="images/etiquette/etiquette-india.jpg?v=1" alt="인도 장례 예절 일러스트" width="1200" height="675" loading="lazy" decoding="async">
+                            </figure>
+                            <header class="religion-panel__head">
+                                <span class="religion-panel__badge">국가별 · 인도</span>
+                                <h3>힌두교 중심의 장례 예절</h3>
+                            </header>
+                            <ul class="religion-panel__list">
+                                <li>
+                                    <strong>화장과 성지(갠지스강)</strong>
+                                    <span>영혼 해탈을 위해 화장을 선호하며, 갠지스강가에서 화장 후 유골을 강물에 흘려보내는 전통이 강합니다.</span>
+                                </li>
+                                <li>
+                                    <strong>슈라다(Śrāddha) 의식</strong>
+                                    <span>기일이나 피트리 팍샤에 쌀·우유로 만든 핀다를 공양하며 조상 영혼을 기립니다.</span>
+                                </li>
+                                <li>
+                                    <strong>조문 복장</strong>
+                                    <span>검은색 대신 애도와 순수를 상징하는 흰색 옷을 입고 조문합니다.</span>
+                                </li>
+                            </ul>
+                        </article>
+
+                        <article class="religion-panel" id="etiquette-europe" data-etiquette-panel="europe" data-parent="country" hidden>
+                            <figure class="religion-panel__visual">
+                                <img src="images/etiquette/etiquette-europe.jpg?v=1" alt="유럽 장례 예절 일러스트" width="1200" height="675" loading="lazy" decoding="async">
+                            </figure>
+                            <header class="religion-panel__head">
+                                <span class="religion-panel__badge">국가별 · 유럽</span>
+                                <h3>엄숙함과 다양성의 장례 예절</h3>
+                            </header>
+                            <ul class="religion-panel__list">
+                                <li>
+                                    <strong>다양성과 엄숙함</strong>
+                                    <span>영국·프랑스·독일 등 국가와 종교(가톨릭·개신교)에 따라 절차는 다르지만, 대체로 엄숙하고 경건한 분위기에서 진행됩니다.</span>
+                                </li>
+                                <li>
+                                    <strong>복장 및 헌화</strong>
+                                    <span>검은색 정장이 기본이며, 묘지·예배당에서 관 위에 흙이나 꽃잎을 한 줌씩 던지며 마지막 인사를 나눕니다.</span>
+                                </li>
+                                <li>
+                                    <strong>조의 표명</strong>
+                                    <span>화려한 부조금보다 조문 편지(카드)나 고인이 지정한 자선단체 기부금으로 애도를 표하는 경우가 많습니다.</span>
+                                </li>
+                            </ul>
+                        </article>
+                    </div>
+                </div>
+
+                <div class="religion-tip">
+                    <p>
+                        <strong>서비스 안내</strong>
+                        추모관·부고장에서 문화·종교 유형을 선택하면, 조문객에게 맞는 예절 안내를 함께 제공할 수 있습니다.
+                        자세한 운영은 상담으로 문의해 주세요.
+                    </p>
+                    <a href="#cyber-apply" class="btn btn-secondary" data-service="다양한 장례 예절 안내">상담 문의</a>
+                </div>
+            </div>
+        </section>
+
+        <section id="workflow-guide" class="section workflow-guide-section">
+            <div class="container">
+                <div class="section-header">
+                    <p class="eyebrow dark">
+                        <i class="fas fa-circle-play"></i>
+                        Video Guide
+                    </p>
+                    <h2>추모관 · 앱 · 제사당<br class="title-break"> 영상 안내</h2>
+                    <p>네이버에서 검색해 들어가고, 화면의 큰 버튼을 따라가면 됩니다. 주소를 직접 치지 않아도 됩니다. 언어를 선택한 뒤 소리를 켜고 시청해 주세요.</p>
+                </div>
+
+                <div class="workflow-lang-tabs" role="tablist" aria-label="영상가이드 언어 선택" data-workflow-lang-tabs>
+                    <button type="button" class="workflow-lang-tab is-active" role="tab" aria-selected="true" data-workflow-lang="ko">한국어</button>
+                    <button type="button" class="workflow-lang-tab" role="tab" aria-selected="false" data-workflow-lang="en">English</button>
+                    <button type="button" class="workflow-lang-tab" role="tab" aria-selected="false" data-workflow-lang="zh">中文</button>
+                    <button type="button" class="workflow-lang-tab" role="tab" aria-selected="false" data-workflow-lang="ja">日本語</button>
+                    <button type="button" class="workflow-lang-tab" role="tab" aria-selected="false" data-workflow-lang="hi">हिन्दी</button>
+                </div>
+
+                <div class="workflow-guide-player">
+                    <video
+                        id="workflowGuideVideo"
+                        controls
+                        playsinline
+                        preload="metadata"
+                        poster="images/workflow-guide/ko/slide_01.png"
+                        aria-label="이루소 추모관·앱·제사당 영상 안내"
+                        data-workflow-video
+                        data-video-version="20260808-searchflow"
+                    >
+                        <source src="images/workflow-guide-ko.mp4?v=20260808-searchflow" type="video/mp4" />
+                        브라우저가 동영상 재생을 지원하지 않습니다.
+                    </video>
+                </div>
+
+                <div class="workflow-url-cards" aria-label="이용 길잡이">
+                    <h3 class="workflow-url-cards__title"><i class="fas fa-route" aria-hidden="true"></i> 이용 길잡이 (검색 → 클릭 → 버튼)</h3>
+                    <div class="workflow-url-grid">
+                        <div class="workflow-url-card">
+                            <span>1. 네이버 검색</span>
+                            <strong>이루소 추모서비스</strong>
+                        </div>
+                        <div class="workflow-url-card">
+                            <span>2. 검색 결과</span>
+                            <strong>이루소 서비스 누르기</strong>
+                        </div>
+                        <a class="workflow-url-card" href="#cyber-apply">
+                            <span>3. 홈에서</span>
+                            <strong>상담 신청 · 추모관 개설</strong>
+                        </a>
+                        <a class="workflow-url-card" href="https://erum2026.co.kr/service-select?mode=trial" target="_blank" rel="noopener">
+                            <span>4. 홈에서</span>
+                            <strong>온라인 제사당 무료체험</strong>
+                        </a>
+                    </div>
+                    <p class="workflow-url-note">주소를 직접 치지 마세요. 네이버 검색 후 버튼을 따라가면 됩니다. 자녀분이 보낸 링크가 있으면 그 링크만 눌러도 됩니다.</p>
+                </div>
+
+                <ol class="workflow-guide-steps" aria-label="영상가이드 단계 요약" data-workflow-steps>
+                    <li><span>01</span><strong data-step-title>네이버 검색</strong><p data-step-desc>이루소 추모서비스</p></li>
+                    <li><span>02</span><strong data-step-title>결과 클릭</strong><p data-step-desc>이루소 서비스 진입</p></li>
+                    <li><span>03</span><strong data-step-title>회원가입</strong><p data-step-desc>무료 체험 → 다음</p></li>
+                    <li><span>04</span><strong data-step-title>이용신청</strong><p data-step-desc>상담·개설 버튼</p></li>
+                    <li><span>05</span><strong data-step-title>사용승인</strong><p data-step-desc>관리자 검토 대기</p></li>
+                    <li><span>06</span><strong data-step-title>로그인</strong><p data-step-desc>카카오·네이버 로그인</p></li>
+                    <li><span>07</span><strong data-step-title>앱 사용</strong><p data-step-desc>사진·방명록·부고</p></li>
+                    <li><span>08</span><strong data-step-title>제사당 체험</strong><p data-step-desc>무료체험 버튼</p></li>
+                </ol>
+
+                <div class="workflow-guide-actions">
+                    <a href="#process" class="btn btn-secondary">
+                        <i class="fas fa-list-ol"></i>
+                        이용안내 보기
+                    </a>
+                    <a href="#cyber-apply" class="btn btn-primary" data-service="온라인 추모관 개설">
+                        <i class="fas fa-file-signature"></i>
+                        추모관 신청하기
+                    </a>
+                </div>
+            </div>
+        </section>
+
         <section id="process" class="section process-section">
             <div class="container">
                 <div class="section-header">
@@ -413,33 +1034,86 @@
                         <i class="fas fa-route"></i>
                         Process
                     </p>
-                    <h2>개설부터 보존까지 차분하게 안내합니다</h2>
-                    <p>필요한 정보만 빠르게 정리해 가족의 부담을 줄입니다.</p>
+                    <h2 id="guide">온라인 디지털 추모관<br class="title-break"> 이용안내</h2>
+                    <p>회원가입부터 추모방 사용까지, 관리자 승인 절차로 안전하게 운영됩니다.
+<!--                        <a href="#procedure" class="process-jump-link">이용 절차 바로가기 →</a> -->
+                    </p>
                 </div>
-                <div class="process-grid">
-                    <article class="process-step">
-                        <span>01</span>
-                        <i class="fas fa-phone-volume"></i>
-                        <h3>상담 접수</h3>
-                        <p>장례 일정, 공개 범위, 필요한 기능을 확인합니다.</p>
+
+                <div class="cyber-guide-block" id="guide-target">
+                    <h3 class="cyber-guide-title"><i class="fas fa-user-check"></i> 이용대상</h3>
+                    <p>이루소 추모 서비스를 통해 추모관(추모방) 개설을 희망하는 유가족</p>
+                    <p class="cyber-guide-fee">요금 : <strong>무료 1</strong> · <strong>유료 3</strong> (보존 / 공유 / 영속)</p>
+                </div>
+
+                <div class="cyber-guide-block" id="procedure">
+                    <h3 class="cyber-guide-title"><i class="fas fa-list-ol"></i> 이용순서 (절차)</h3>
+                    <ol class="cyber-flow" aria-label="온라인 디지털 추모관 이용순서">
+                        <li class="cyber-flow__step">
+                            <span class="cyber-flow__icon" aria-hidden="true"><i class="fas fa-user-plus"></i></span>
+                            <strong>회원가입</strong>
+                            <p>이루소 앱에서 회원 가입</p>
+                        </li>
+                        <li class="cyber-flow__arrow" aria-hidden="true"><i class="fas fa-angles-right"></i></li>
+                        <li class="cyber-flow__step">
+                            <span class="cyber-flow__icon" aria-hidden="true"><i class="fas fa-clipboard-list"></i></span>
+                            <strong>이용신청</strong>
+                            <p style="letter-spacing: -0.4px;">아래 신청 또는 문의 폼 접수</p>
+                        </li>
+                        <li class="cyber-flow__arrow" aria-hidden="true"><i class="fas fa-angles-right"></i></li>
+                        <li class="cyber-flow__step">
+                            <span class="cyber-flow__icon" aria-hidden="true"><i class="fas fa-cloud-arrow-up"></i></span>
+                            <strong>사용승인</strong>
+                            <p>관리자가 검토 후 승인</p>
+                        </li>
+                        <li class="cyber-flow__arrow" aria-hidden="true"><i class="fas fa-angles-right"></i></li>
+                        <li class="cyber-flow__step">
+                            <span class="cyber-flow__icon" aria-hidden="true"><i class="fas fa-desktop"></i></span>
+                            <strong>추모방 생성</strong>
+                            <p>관리자가 추모관 개설</p>
+                        </li>
+                        <li class="cyber-flow__arrow" aria-hidden="true"><i class="fas fa-angles-right"></i></li>
+                        <li class="cyber-flow__step">
+                            <span class="cyber-flow__icon" aria-hidden="true"><i class="fas fa-image-portrait"></i></span>
+                            <strong>추모방 사용</strong>
+                            <p>마이페이지에서 이용</p>
+                        </li>
+                    </ol>
+                    <div class="cyber-flow__actions">
+                        <a id="cyberSignupLink" class="btn btn-secondary" href="https://erum2026.co.kr/signup" target="_blank" rel="noopener">
+                            <i class="fas fa-user-plus"></i>
+                            1. 회원가입
+                        </a>
+                        <a href="#cyber-apply" class="btn btn-primary" id="cyberApplyBtn" data-service="온라인 추모관 개설">
+                            <i class="fas fa-file-signature"></i>
+                            온라인 디지털 추모관 신청하기
+                        </a>
+                    </div>
+                </div>
+
+                <div class="cyber-info-grid">
+                    <article class="cyber-info-card">
+                        <h3 class="cyber-guide-title"><i class="fas fa-folder-open"></i> 등록 가능자료</h3>
+                        <p>고인사진, 육성자료, 동영상자료, 이력 및 업적 등</p>
                     </article>
-                    <article class="process-step">
-                        <span>02</span>
-                        <i class="fas fa-file-circle-plus"></i>
-                        <h3>자료 등록</h3>
-                        <p>고인 정보, 사진, 가족 인사말, 장례식장 정보를 정리합니다.</p>
+                    <article class="cyber-info-card">
+                        <h3 class="cyber-guide-title"><i class="fas fa-star"></i> 주요기능</h3>
+                        <p>고인 갤러리, 촛불켜기, 향 올리기, 꽃 바치기</p>
                     </article>
-                    <article class="process-step">
-                        <span>03</span>
-                        <i class="fas fa-share-nodes"></i>
-                        <h3>부고 공유</h3>
-                        <p>완성된 링크와 QR을 문자, 카카오톡, 인쇄물로 활용합니다.</p>
+                    <article class="cyber-info-card cyber-info-card--wide">
+                        <h3 class="cyber-guide-title"><i class="fas fa-lock"></i> 공개·비공개 설정안내</h3>
+                        <p style="letter-spacing: -0.05px;">
+                            추모방을 <strong>비공개</strong>로 설정하면 개설자만 마이페이지에서 확인할 수 있으며,
+                            검색·목록에 노출되지 않습니다. 일반 회원은 공개추모관·추모메세지 기능만을 이용할 수 있습니다.
+                        </p>
                     </article>
-                    <article class="process-step">
-                        <span>04</span>
-                        <i class="fas fa-box-archive"></i>
-                        <h3>기록 보존</h3>
-                        <p>조문록과 앨범을 가족이 계속 관리하고 보관합니다.</p>
+                    <article class="cyber-info-card cyber-info-card--wide">
+                        <h3 class="cyber-guide-title"><i class="fas fa-shield-halved"></i> 사용자 준수사항</h3>
+                        <ul class="cyber-rules">
+                            <li>건전한 온라인 추모 공간 조성을 위해 바른 언어를 사용합니다.</li>
+                            <li>건전하지 못한 목적으로 사용 시 이용이 제한되며, 민·형사상 책임을 질 수 있습니다.</li>
+                            <li>웹 로딩 속도를 위해 동영상은 50MB(15초 미만) 이하 , 사진은 1MB 이하로 등록해 주세요.</li>
+                        </ul>
                     </article>
                 </div>
             </div>
@@ -452,30 +1126,48 @@
             <div class="container">
 
                 <!-- ① 패키지 선택 — 전체 폭 -->
-                <div class="package-selector-top" aria-label="추모관 운영 방식">
+                <div id="signup-plans" class="package-selector-top" aria-label="요금제 선택">
                     <div class="pkg-top-copy">
-                        <p class="eyebrow dark"><i class="fas fa-circle-check"></i> Care Packages</p>
-                        <h2>상황에 맞는 추모관 운영 방식</h2>
-                        <p>기본 부고형부터 가족 기록 보존형까지 필요한 만큼 선택할 수 있습니다.</p>
+                        <p class="eyebrow dark"><i class="fas fa-circle-check"></i> Plans</p>
+                        <h2>무료 1 · 유료 3 요금제</h2>
+                        <p style="letter-spacing: -0.4px;">무료로 시작하고, 필요에 따라 기억의 보존·공유·영속을 선택하세요.</p>
                     </div>
-                    <div class="pkg-top-cards">
-                        <button type="button" class="package-card active" data-package="기본 추모형">
-                            <strong>기본</strong>
-                            <span>부고, 일정, 온라인 조문</span>
+                    <div class="pkg-top-cards pkg-top-cards--plans">
+                        <button type="button" class="package-card active" data-package="FREE" data-plan="FREE" data-paid="0">
+                            <em class="pkg-badge free">무료</em>
+                            <strong>무료 (3개월)</strong>
+                            <span>· 추모공간 1개 등록<br>· 사진 1장<br>· 방명록 5건<br>· 사진갤러리 기능<br>· 방명록 기능</span>
+                            <b class="pkg-price">0원/3개월 무료</b>
                         </button>
-                        <button type="button" class="package-card" data-package="기록 보존형">
-                            <strong>기록</strong>
-                            <span>사진, 영상, 생애 기록</span>
+                        <button type="button" class="package-card" data-package="PRESERVE" data-plan="PRESERVE" data-paid="1">
+                            <em class="pkg-badge paid">유료</em>
+                            <strong>기억의 보존</strong>
+                            <span>· 1년 사용권<br>· 추모공간 1개 등록<br>· 사진 20장<br>· 방명록 100건<br>· 자동백업<br>· 무료 + 추모메세지<br>· 무료 + 추모일정</span>
+                            <b class="pkg-price">9,900원/년</b>
                         </button>
-                        <button type="button" class="package-card" data-package="맞춤 아카이브">
-                            <strong>맞춤</strong>
-                            <span>자료 정리와 운영 지원</span>
+                        <button type="button" class="package-card" data-package="SHARE" data-plan="SHARE" data-paid="1">
+                            <em class="pkg-badge paid">유료</em>
+                            <strong>기억의 공유</strong>
+                            <span>· 1년 사용권<br>· 추모관 2개 등록<br>· 사진 100장<br>· 방명록 1,000건<br>· 프리미엄 기능 4개<br>· 공동운영<br>· 기일알림<br>· 자동백업</span>
+                            <b class="pkg-price">29,900원/년</b>
+                        </button>
+                        <button type="button" class="package-card" data-package="ETERNAL" data-plan="ETERNAL" data-paid="1">
+                            <em class="pkg-badge paid">유료</em>
+                            <strong>기억의 영속</strong>
+                            <span>· 3년 이용권<br>· 신규기능 우선 이용권<br>· 추모관 무제한<br>· 사진 무제한<br>· 방명록 무제한<br>· 프리미엄 기능 전체</span>
+                            <b class="pkg-price">99,000원/4년</b>
                         </button>
                     </div>
+                    <p class="pkg-top-cta">
+                        <a id="planSignupLink" class="btn btn-primary" href="https://erum2026.co.kr/signup?plan=FREE" target="_blank" rel="noopener">
+                            무료로 회원가입
+                        </a>
+                        <a href="https://erum2026.co.kr/pricing" target="_blank" rel="noopener" class="pkg-pricing-link">요금제 자세히 보기</a>
+                    </p>
                 </div>
 
                 <!-- ② 설명 + 폼 — 2단 레이아웃 -->
-                <div class="contact-bottom-layout">
+                <div id="cyber-apply" class="contact-bottom-layout">
 
                     <!-- 왼쪽: 설명 + 연락처 -->
                     <div class="contact-copy-col">
@@ -483,13 +1175,22 @@
                             <i class="fas fa-paper-plane"></i>
                             Contact
                         </p>
-                        <h2>추모관 개설 및 문의 상담</h2>
-                        <p>필요한 일정과 공개 범위를 남겨주시면 담당자가 확인 후 안내드립니다.<br>
-                           급한 부고 페이지는 우선 개설 후 자료를 순차 보완할 수 있습니다.</p>
+                        <h2>온라인 디지털 추모관 이용신청</h2>
+                        <p>
+                            이용신청이 접수되면 관리자가 <strong>당일 사용승인</strong> 후 추모방을 생성합니다.<br>
+                            급한 부고 페이지는 사전 부고장 정보를 주시면 우선 개설 후 <br>자료를 순차 보완할 수 있습니다.
+                        </p>
+                        <ol class="contact-flow-mini">
+                            <li>회원가입</li>
+                            <li class="is-current">이용신청</li>
+                            <li>사용승인</li>
+                            <li>추모방 생성</li>
+                            <li>추모방 사용</li>
+                        </ol>
                         <div class="contact-info-list">
                             <div class="contact-info-row">
                                 <i class="fas fa-phone"></i>
-                                <span>1588-XXXX</span>
+                                <span>010-2960-8688</span>
                             </div>
                             <div class="contact-info-row">
                                 <i class="fas fa-envelope"></i>
@@ -504,11 +1205,12 @@
 
                     <!-- 오른쪽: 상담 신청 폼 -->
                     <form class="contact-form" id="contactForm" novalidate>
-                        <input type="hidden" id="selectedPackage" name="selectedPackage" value="기본 추모형">
+                        <input type="hidden" id="selectedPackage" name="selectedPackage" value="FREE">
+                        <input type="hidden" id="selectedPlanCode" name="planCode" value="FREE">
 
                         <div class="form-row-2col">
                             <div class="form-row">
-                                <label for="contactName">성함</label>
+                                <label for="contactName">신청자 성함</label>
                                 <input type="text" id="contactName" name="name" autocomplete="name" required placeholder="홍길동">
                             </div>
                             <div class="form-row">
@@ -522,24 +1224,28 @@
                                 <input type="email" id="contactEmail" name="email" autocomplete="email" placeholder="">
                             </div>
                             <div class="form-row">
-                                <label for="serviceType">상담 항목</label>
-                                <select id="serviceType" name="serviceType" required>
-                                    <option value="">선택해주세요</option>
-                                    <option>부고 공유 및 장례 일정 안내</option>
-                                    <option>온라인 추모관 개설</option>
-                                    <option>봉안당/납골당 분양 상담</option>
-                                    <option>키오스크 도입 문의</option>
-                                    <option>기타 문의</option>
-                                </select>
+                                <label for="memorialName">고인 성함</label>
+                                <input type="text" id="memorialName" name="memorialName" placeholder="故 성함" maxlength="100">
                             </div>
                         </div>
                         <div class="form-row">
-                            <label for="contactMessage">문의 내용</label>
-                            <textarea id="contactMessage" name="message" rows="5" placeholder="희망 일정, 필요한 기능, 공개 범위 등을 적어주세요."></textarea>
+                            <label for="serviceType">상담 항목</label>
+                            <select id="serviceType" name="serviceType" required>
+                                <option value="">선택해주세요</option>
+                                <option value="온라인 추모관 개설" selected>온라인 추모관 개설 (온라인 디지털 추모관)</option>
+                                <option value="부고 공유 및 장례 일정 안내">부고 공유 및 장례 일정 안내</option>
+                                <option value="봉안당/납골당 분양 상담">봉안당/납골당 분양 상담</option>
+                                <option value="키오스크 도입 문의">키오스크 도입 문의</option>
+                                <option value="기타 문의">기타 문의</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <label for="contactMessage">신청·문의 내용</label>
+                            <textarea id="contactMessage" name="message" rows="5" placeholder="희망 일정, 공개/비공개 여부, 필요한 기능 등을 적어주세요."></textarea>
                         </div>
                         <button type="submit" class="btn btn-primary form-submit" id="contactSubmitBtn">
                             <i class="fas fa-paper-plane"></i>
-                            상담 요청 보내기
+                            이용신청 접수하기
                         </button>
                         <p class="form-notice" id="contactNotice" style="display:none;"></p>
                     </form>
@@ -554,25 +1260,32 @@
             <div>
                 <div class="footer-brand">
                     <img src="images/logo-eruso-final-02.png" alt="이루소 로고">
-                    <span>추모 시스템 | 기억을 오래 머물게 하는 디지털 추모관</span>
+                    <span>온라인 추모 서비스 | 기억을 오래 머물게 하는 디지털 추모관</span>
                 </div>
-                <p>기억을 존중하고, 남겨진 마음을 안전하게 보관하는 디지털 추모 플랫폼</p>
+                <p style="text-align: right;"  style="letter-spacing: 1px;">기억을 존중하고, 남겨진 마음을 안전하게 보관하는 디지털 추모 플랫폼</p>
             </div>
             <div>
                 <h3>서비스</h3>
                 <a href="#features">기능</a>
-                <a href="#memorial">추모관</a>
-                <a href="#process">절차</a>
+                <a href="#columbarium">장례 시설</a>
+                <a id="footerJesaTrialLink" href="https://erum2026.co.kr/service-select?mode=trial" target="_blank" rel="noopener">온라인 제사당 무료체험</a>
+                <a href="#funeral-guide">장례 안내</a>
+                <a href="#religion-guide">다양한 장례 예절</a>
+                <a href="#workflow-guide">영상 안내</a>
+                <a href="#process">회원가입방법</a>
+                <a href="#cyber-apply">이용안내</a>
+                <a href="#procedure">이용 절차</a>
+                <a href="#cyber-apply">문의</a>
             </div>
             <div>
                 <h3>고객지원</h3>
-                <a href="#contact">상담 문의</a>
-                <a href="#contact">제휴 문의</a>
-                <a href="#contact">운영 지원</a>
+                <a href="#cyber-apply">상담 문의</a>
+                <a href="#cyber-apply">제휴 문의</a>
+                <a href="#cyber-apply">운영 지원</a>
             </div>
         </div>
         <div class="footer-bottom">
-            <p>&copy; 2026 ERUSO Memorial System. All rights reserved.</p>
+            <p>&copy; 2026 eruso Memorial System. All rights reserved.</p>
         </div>
     </footer>
 
@@ -580,7 +1293,7 @@
         <i class="fas fa-arrow-up"></i>
     </button>
 
-    <script src="js/main.js"></script>
+    <script src="js/main.js?v=20260809-signup-label"></script>
     <script src="js/columbarium.js"></script>
 </body>
 </html>
