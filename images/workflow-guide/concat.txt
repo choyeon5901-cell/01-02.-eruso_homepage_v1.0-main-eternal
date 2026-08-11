@@ -1,0 +1,19 @@
+file 'C:/GitHub/01-02. eruso_homepage_v1.0-main-eternal/images/workflow-guide/slide_01.png'
+duration 16.558
+file 'C:/GitHub/01-02. eruso_homepage_v1.0-main-eternal/images/workflow-guide/slide_02.png'
+duration 15.262
+file 'C:/GitHub/01-02. eruso_homepage_v1.0-main-eternal/images/workflow-guide/slide_03.png'
+duration 13.294
+file 'C:/GitHub/01-02. eruso_homepage_v1.0-main-eternal/images/workflow-guide/slide_04.png'
+duration 14.758
+file 'C:/GitHub/01-02. eruso_homepage_v1.0-main-eternal/images/workflow-guide/slide_05.png'
+duration 13.630
+file 'C:/GitHub/01-02. eruso_homepage_v1.0-main-eternal/images/workflow-guide/slide_06.png'
+duration 18.310
+file 'C:/GitHub/01-02. eruso_homepage_v1.0-main-eternal/images/workflow-guide/slide_07.png'
+duration 14.182
+file 'C:/GitHub/01-02. eruso_homepage_v1.0-main-eternal/images/workflow-guide/slide_08.png'
+duration 15.790
+file 'C:/GitHub/01-02. eruso_homepage_v1.0-main-eternal/images/workflow-guide/slide_09.png'
+duration 14.806
+file 'C:/GitHub/01-02. eruso_homepage_v1.0-main-eternal/images/workflow-guide/slide_09.png'
