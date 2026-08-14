@@ -55,66 +55,135 @@
     let hoverCell   = null;
     let selectedCell = null;
     let selectedFacility = null;
-    let seedKey = 'default';
+    let memorialNameFilter = '';
+    let layoutMeta = { total_rooms: 0, occupied_on_page: 0, source: 'loading' };
     const cache = {};
+    let layoutLoadSeq = 0;
 
-    const NAMES = ['홍길동','이순신','김철수','박영희','최갑순','정민우','강지연','윤성호','임미란','송태양'];
+    const layoutStatusEl = document.getElementById('columbLayoutStatus');
+    const memorialKeywordEl = document.getElementById('columbMemorialKeyword');
 
-    // ── 시드 RNG (시설별 고정 배치) ────────────────────────────
-    function hashStr(s) {
-        let h = 2166136261;
-        for (let i = 0; i < s.length; i++) {
-            h ^= s.charCodeAt(i);
-            h = Math.imul(h, 16777619);
-        }
-        return h >>> 0;
-    }
-    function makeRng(seed) {
-        let s = hashStr(String(seed)) || 1;
-        return function rand() {
-            s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
-            return s / 4294967296;
-        };
+    function setLayoutStatus(msg) {
+        if (layoutStatusEl) layoutStatusEl.textContent = msg || '';
     }
 
-    function makeData(zone, floor) {
-        const rand = makeRng(`${seedKey}|${zone}|${floor}`);
+    function emptyGrid() {
         const data = {};
         for (let r = 0; r < ROWS; r++) {
             for (let c = 0; c < COLS; c++) {
-                const key = `${r}-${c}`;
-                const roll = rand();
-                const occupied = roll < 0.65;
                 const row_label = r + 1;
                 const col_label = c + 1;
-                data[key] = {
-                    id:       `${zone}${floor}-${String(row_label).padStart(2,'0')}${String(col_label).padStart(2,'0')}`,
-                    zone,
-                    floor,
-                    row:      row_label,
-                    col:      col_label,
-                    occupied,
-                    name:     occupied ? NAMES[Math.floor(rand() * NAMES.length)] : null,
-                    birth:    occupied ? pickDate(rand, 1920, 1970) : null,
-                    death:    occupied ? pickDate(rand, 1990, 2024) : null,
-                    price:    !occupied && rand() >= 0.35 ? `${(Math.floor(rand() * 6) + 4) * 50}만원` : null,
+                data[`${r}-${c}`] = {
+                    id: `${activeZone}${activeFloor}-${String(row_label).padStart(2, '0')}${String(col_label).padStart(2, '0')}`,
+                    zone: activeZone,
+                    floor: activeFloor,
+                    row: row_label,
+                    col: col_label,
+                    occupied: false,
+                    name: null,
+                    birth: null,
+                    death: null,
+                    memorial_room_id: null,
+                    view_url: null,
+                    login_url: null,
+                    href: null,
+                    is_public: false,
+                    matched: false,
+                    price: null,
                 };
             }
         }
         return data;
     }
 
-    function pickDate(rand, from, to) {
-        const y = from + Math.floor(rand() * (to - from));
-        const m = String(Math.floor(rand() * 12) + 1).padStart(2,'0');
-        const d = String(Math.floor(rand() * 28) + 1).padStart(2,'0');
-        return `${y}-${m}-${d}`;
+    function cellsToData(cells) {
+        const data = emptyGrid();
+        (cells || []).forEach((cell) => {
+            const r = (cell.row || 1) - 1;
+            const c = (cell.col || 1) - 1;
+            if (r < 0 || c < 0 || r >= ROWS || c >= COLS) return;
+            const key = `${r}-${c}`;
+            const row_label = r + 1;
+            const col_label = c + 1;
+            data[key] = {
+                id: `${activeZone}${activeFloor}-${String(row_label).padStart(2, '0')}${String(col_label).padStart(2, '0')}`,
+                zone: activeZone,
+                floor: activeFloor,
+                row: row_label,
+                col: col_label,
+                occupied: !!cell.occupied,
+                name: cell.name || null,
+                title: cell.title || null,
+                birth: cell.birth || null,
+                death: cell.death || null,
+                memorial_room_id: cell.memorial_room_id || null,
+                is_public: cell.is_public === true,
+                view_url: cell.view_path ? `${appBase}${cell.view_path}` : null,
+                login_url: cell.login_path ? `${appBase}${cell.login_path}` : null,
+                href: cell.href
+                    ? `${appBase}${cell.href}`
+                    : (cell.view_path ? `${appBase}${cell.view_path}` : null),
+                matched: !!cell.matched,
+                price: cell.occupied ? null : '상담 문의',
+            };
+        });
+        return data;
+    }
+
+    async function loadLayoutFromDb() {
+        const seq = ++layoutLoadSeq;
+        const cacheKey = `${selectedFacility?.id || 'default'}|${activeZone}-${activeFloor}|${memorialNameFilter}`;
+        if (cache[cacheKey]) {
+            layoutMeta = cache[cacheKey]._meta || layoutMeta;
+            setLayoutStatus(
+                `추모관 ${layoutMeta.total_rooms || 0}곳 · 이 층 ${layoutMeta.occupied_on_page || 0}칸 사용중`
+            );
+            draw();
+            return cache[cacheKey];
+        }
+
+        setLayoutStatus('배치도 불러오는 중…');
+        const p = new URLSearchParams({
+            zone: activeZone,
+            floor: activeFloor,
+            cols: String(COLS),
+            rows: String(ROWS),
+        });
+        if (memorialNameFilter) p.set('q', memorialNameFilter);
+        if (selectedFacility?.id) p.set('facility_key', selectedFacility.id);
+
+        try {
+            const payload = await fetchJson(`${apiBase}/api/memorial-rooms/columbarium-layout?${p}`);
+            if (seq !== layoutLoadSeq) return emptyGrid();
+            const data = cellsToData(payload.cells);
+            layoutMeta = {
+                total_rooms: payload.total_rooms || 0,
+                occupied_on_page: payload.occupied_on_page || 0,
+                public_rooms: payload.public_rooms || 0,
+                private_rooms: payload.private_rooms || 0,
+                source: payload.source || 'memorial_rooms_db',
+            };
+            data._meta = layoutMeta;
+            cache[cacheKey] = data;
+            setLayoutStatus(
+                `추모관 ${layoutMeta.total_rooms}곳 (공개 ${layoutMeta.public_rooms} · 비공개 ${layoutMeta.private_rooms}) · 이 층 ${layoutMeta.occupied_on_page}칸`
+            );
+            draw();
+            return data;
+        } catch (err) {
+            if (seq !== layoutLoadSeq) return emptyGrid();
+            layoutMeta = { total_rooms: 0, occupied_on_page: 0, source: 'error' };
+            setLayoutStatus(`배치도를 불러오지 못했습니다. (${apiBase})`);
+            const data = emptyGrid();
+            cache[cacheKey] = data;
+            draw();
+            return data;
+        }
     }
 
     function getData() {
-        const key = `${seedKey}|${activeZone}-${activeFloor}`;
-        if (!cache[key]) cache[key] = makeData(activeZone, activeFloor);
-        return cache[key];
+        const key = `${selectedFacility?.id || 'default'}|${activeZone}-${activeFloor}|${memorialNameFilter}`;
+        return cache[key] || emptyGrid();
     }
 
     function clearSlotCache() {
@@ -191,8 +260,13 @@
                     ctx.fillStyle = 'rgba(255,255,255,0.22)';
                 } else if (isHover) {
                     ctx.fillStyle = COLOR.hover;
-                } else if (cell.occupied) {
+                } else if (cell.matched) {
+                    ctx.fillStyle = 'rgba(255,180,60,0.9)';
+                } else if (cell.occupied && cell.is_public) {
                     ctx.fillStyle = COLOR.occupied;
+                } else if (cell.occupied) {
+                    // 비공개: 약간 어두운 골드
+                    ctx.fillStyle = 'rgba(140,110,70,0.88)';
                 } else {
                     ctx.fillStyle = COLOR.available;
                 }
@@ -205,12 +279,15 @@
                 }
 
                 ctx.fillStyle = cell.occupied
-                    ? (isSelected ? '#fff' : 'rgba(30,20,10,0.85)')
+                    ? (isSelected || cell.matched ? '#1a1206' : 'rgba(30,20,10,0.85)')
                     : 'rgba(255,255,255,0.9)';
                 ctx.font = `bold ${Math.min(12, CELL_H * 0.28)}px "Noto Sans KR", sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(cell.id.split('-')[1], rect.x + rect.w / 2, rect.y + rect.h / 2);
+                const label = cell.occupied && cell.name
+                    ? (String(cell.name).length > 3 ? String(cell.name).slice(0, 3) : cell.name)
+                    : cell.id.split('-')[1];
+                ctx.fillText(label, rect.x + rect.w / 2, rect.y + rect.h / 2);
             }
         }
 
@@ -280,15 +357,53 @@
             : '';
 
         const badge = cell.occupied
-            ? '<span style="background:rgba(200,169,110,0.85);color:#1a1206;border-radius:6px;padding:2px 10px;font-size:12px;font-weight:800;">사용중</span>'
+            ? (cell.is_public
+                ? '<span style="background:rgba(200,169,110,0.85);color:#1a1206;border-radius:6px;padding:2px 10px;font-size:12px;font-weight:800;">공개 추모관</span>'
+                : '<span style="background:rgba(120,140,160,0.9);color:#0e141c;border-radius:6px;padding:2px 10px;font-size:12px;font-weight:800;">비공개 · 로그인 필요</span>')
             : '<span style="background:rgba(48,200,140,0.8);color:#082820;border-radius:6px;padding:2px 10px;font-size:12px;font-weight:800;">분양가능</span>';
 
         const detail = cell.occupied
             ? `<p style="margin:10px 0 0;font-size:14px;color:rgba(240,240,240,0.75);">故 <strong style="font-size:16px;color:#f0f0f0;">${esc(cell.name)}</strong></p>
-               <p style="font-size:12px;color:rgba(240,240,240,0.5);margin:4px 0 0;">생년월일: ${esc(cell.birth)}</p>
-               <p style="font-size:12px;color:rgba(240,240,240,0.5);">사망일: ${esc(cell.death)}</p>`
+               ${cell.title ? `<p style="font-size:12px;color:rgba(240,240,240,0.55);margin:4px 0 0;">${esc(cell.title)}</p>` : ''}
+               <p style="font-size:12px;color:rgba(240,240,240,0.5);margin:4px 0 0;">생년월일: ${esc(cell.birth || '—')}</p>
+               <p style="font-size:12px;color:rgba(240,240,240,0.5);">사망일: ${esc(cell.death || '—')}</p>
+               ${cell.is_public ? '' : '<p style="margin:8px 0 0;font-size:12px;color:rgba(200,169,110,0.85);">비공개 추모관입니다. 추모서비스 로그인 후 입장할 수 있습니다.</p>'}`
             : `<p style="margin:10px 0 0;font-size:13px;color:rgba(240,240,240,0.65);">분양 상담 가능합니다.</p>
-               ${cell.price ? `<p style="font-size:15px;color:#c8a96e;font-weight:800;margin:6px 0 0;">분양가: ${esc(cell.price)}</p>` : ''}`;
+               ${cell.price ? `<p style="font-size:15px;color:#c8a96e;font-weight:800;margin:6px 0 0;">${esc(cell.price)}</p>` : ''}`;
+
+        let actions = '';
+        if (cell.occupied && cell.is_public && (cell.view_url || cell.href)) {
+            const url = cell.view_url || cell.href;
+            actions = `<div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);display:flex;gap:8px;flex-wrap:wrap;">
+                <a href="${esc(url)}" target="_blank" rel="noopener"
+                   style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;background:linear-gradient(135deg,#c8a96e,#a07840);color:#fff;border-radius:8px;font-size:13px;font-weight:800;text-decoration:none;">
+                   추모관 보기
+                </a>
+                <a href="#contact" onclick="document.getElementById('columbInfoPanel').style.display='none';"
+                   style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;background:rgba(255,255,255,0.08);color:#fff;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">
+                   상담 신청
+                </a>
+              </div>`;
+        } else if (cell.occupied && !cell.is_public && (cell.login_url || cell.href)) {
+            const url = cell.login_url || cell.href;
+            actions = `<div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);display:flex;gap:8px;flex-wrap:wrap;">
+                <a href="${esc(url)}" target="_blank" rel="noopener"
+                   style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;background:linear-gradient(135deg,#304d73,#1e334f);color:#fff;border-radius:8px;font-size:13px;font-weight:800;text-decoration:none;">
+                   로그인 후 입장
+                </a>
+                <a href="#contact" onclick="document.getElementById('columbInfoPanel').style.display='none';"
+                   style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;background:rgba(255,255,255,0.08);color:#fff;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">
+                   상담 신청
+                </a>
+              </div>`;
+        } else {
+            actions = `<div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);">
+                <a href="#contact" onclick="document.getElementById('columbInfoPanel').style.display='none';"
+                   style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;background:linear-gradient(135deg,#c8a96e,#a07840);color:#fff;border-radius:8px;font-size:13px;font-weight:800;text-decoration:none;">
+                   📞 상담 신청
+                </a>
+              </div>`;
+        }
 
         infoContent.innerHTML = `
             ${facilityLine}
@@ -297,12 +412,7 @@
             </p>
             ${badge}
             ${detail}
-            <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);">
-                <a href="#contact" onclick="document.getElementById('columbInfoPanel').style.display='none';"
-                   style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;background:linear-gradient(135deg,#c8a96e,#a07840);color:#fff;border-radius:8px;font-size:13px;font-weight:800;text-decoration:none;">
-                   📞 상담 신청
-                </a>
-            </div>
+            ${actions}
         `;
         infoPanel.style.display = 'block';
     }
@@ -323,7 +433,7 @@
         activeZone = btn.dataset.zone;
         selectedCell = null;
         infoPanel.style.display = 'none';
-        draw();
+        loadLayoutFromDb();
     });
 
     document.getElementById('columbFloorTabs')?.addEventListener('click', (e) => {
@@ -334,7 +444,7 @@
         activeFloor = btn.dataset.floor;
         selectedCell = null;
         infoPanel.style.display = 'none';
-        draw();
+        loadLayoutFromDb();
     });
 
     // ── 시설 선택 → 뷰어 반영 ─────────────────────────────────
@@ -377,7 +487,6 @@
 
     function applyFacility(facility) {
         selectedFacility = facility;
-        seedKey = facility ? (facility.id || facility.name) : 'default';
         clearSlotCache();
 
         if (facility && selectedEl) {
@@ -389,17 +498,17 @@
             if (selectedMetaEl) selectedMetaEl.textContent = metaParts.join(' · ');
             if (selectedLinksEl) selectedLinksEl.innerHTML = linkHtml(facility);
             if (facilityLabelEl) {
-                facilityLabelEl.textContent = `${facility.name} 배치도 (데모 현황)`;
+                facilityLabelEl.textContent = `${facility.name} 배치도 (DB 추모관)`;
             }
             document.getElementById('columbariumSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         } else if (selectedEl) {
             selectedEl.hidden = true;
             if (selectedLinksEl) selectedLinksEl.innerHTML = '';
             if (facilityLabelEl) {
-                facilityLabelEl.textContent = '시설을 선택하면 해당 봉안당 배치도가 표시됩니다.';
+                facilityLabelEl.textContent = '시설을 선택하면 해당 봉안당 배치도가 표시됩니다. (DB 추모관 기준)';
             }
         }
-        draw();
+        loadLayoutFromDb();
     }
 
     clearBtn?.addEventListener('click', () => applyFacility(null));
@@ -430,12 +539,28 @@
         return res.json();
     }
 
+    const SEJONG_FACILITY = {
+        id: 'sejong-columbarium',
+        name: '세종봉안당',
+        kind: 'funeral',
+        kindLabel: '테스트·봉안당',
+        region: '세종특별자치시',
+        sigungu: '조치원읍',
+        address: '세종특별자치시 조치원읍 장안로 41',
+        phone: '010-2960-8688',
+        homepage: 'https://www.eruso.co.kr',
+        raw: { _test: true, _partner_key: 'sejong-columbarium', fcltNm: '세종봉안당' },
+    };
+
     function normalizeFuneral(item) {
+        const partnerKey = item._partner_key || '';
         return {
-            id: `FF-${item.fcltNm || ''}-${item.addr || ''}`,
+            id: partnerKey || `FF-${item.fcltNm || ''}-${item.addr || ''}`,
             name: item.fcltNm || '이름 없음',
             kind: 'funeral',
-            kindLabel: item.gubun ? `장례식장·${item.gubun}` : '장례식장·추모공원',
+            kindLabel: item._test
+                ? '테스트·봉안당'
+                : (item.gubun ? `장례식장·${item.gubun}` : '장례식장·추모공원'),
             region: item.ctpv || '',
             sigungu: item.sigungu || '',
             address: item.addr || '',
@@ -443,6 +568,64 @@
             homepage: item.homepageUrl || item.homepage || '',
             raw: item,
         };
+    }
+
+    function ensureSejongInList(items, q, region) {
+        const list = Array.isArray(items) ? [...items] : [];
+        const has = list.some((it) =>
+            it.id === 'sejong-columbarium' || String(it.name || '').includes('세종봉안당')
+        );
+        if (has) return list;
+
+        const qn = (q || '').trim();
+        const rn = (region || '').trim();
+        // 테스트 시설: 조건 없을 때 / 세종·봉안 검색 / 세종 시도 선택 시 항상 노출
+        const show =
+            !qn && !rn
+            || !qn
+            || qn.includes('세종')
+            || qn.includes('봉안')
+            || '세종봉안당'.includes(qn)
+            || rn.includes('세종');
+        if (show) list.unshift(SEJONG_FACILITY);
+        return list;
+    }
+
+    function renderFacilityCards(items, q) {
+        if (!listEl) return;
+        listEl.innerHTML = items.map((it, idx) => {
+            const meta = [it.region, it.sigungu, it.address].filter(Boolean).join(' · ');
+            const links = linkHtml(it, { compact: true });
+            const nameMatch = q && String(it.name || '').includes(q);
+            const active = selectedFacility && (selectedFacility.id === it.id || selectedFacility.name === it.name);
+            return `
+                <article class="columb-search__card${nameMatch ? ' is-name-hit' : ''}${active ? ' is-active' : ''}" role="listitem" data-idx="${idx}">
+                    <span class="columb-search__card-badge">${esc(it.kindLabel)}</span>
+                    <strong class="columb-search__card-name">${esc(it.name)}</strong>
+                    ${meta ? `<span class="columb-search__card-meta">${esc(meta)}</span>` : ''}
+                    ${it.phone ? `<span class="columb-search__card-phone">${esc(it.phone)}</span>` : ''}
+                    ${links ? `<div class="columb-search__card-links">${links}</div>` : ''}
+                    <button type="button" class="columb-search__card-cta" data-select="${idx}">이 시설 보기</button>
+                </article>
+            `;
+        }).join('');
+
+        listEl.querySelectorAll('[data-select]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const idx = Number(btn.getAttribute('data-select'));
+                const facility = items[idx];
+                if (!facility) return;
+                listEl.querySelectorAll('.columb-search__card').forEach((b) => b.classList.remove('is-active'));
+                btn.closest('.columb-search__card')?.classList.add('is-active');
+                applyFacility(facility);
+            });
+        });
+    }
+
+    function showPartnerFacilities(statusMsg) {
+        const items = [SEJONG_FACILITY];
+        setStatus(statusMsg || '테스트 시설: 세종봉안당');
+        renderFacilityCards(items, '');
     }
 
     function normalizeCemetery(item) {
@@ -483,19 +666,23 @@
         const region = (regionEl?.value || '').trim();
         const q = (keywordEl?.value || '').trim();
 
-        // 검색 조건 없으면 결과 비움 (전체 목록 자동 노출 방지)
+        // 조건 없음 → 테스트 파트너(세종봉안당)만 먼저 노출
         if (!q && !region && cat === 'all') {
-            listEl.innerHTML = '';
-            setStatus('시설명·주소 또는 시도를 선택한 뒤 검색해 주세요.');
+            showPartnerFacilities('테스트 시설: 세종봉안당 — 시설명·시도를 입력하면 전체 검색합니다.');
             return;
         }
 
-        setStatus('검색 중…');
+        // 국립묘지만 선택한 경우 세종봉안당은 해당 없음
+        if (cat === 'cemetery') {
+            // fall through to cemetery API only
+        }
+
+        setStatus(q ? `"${q}" 시설명 검색 중…` : '검색 중…');
         listEl.innerHTML = '';
 
         const tasks = [];
         if (cat === 'all' || cat === 'funeral') {
-            const p = new URLSearchParams({ page: '1', size: '30' });
+            const p = new URLSearchParams({ page: '1', size: '50' });
             if (q) p.set('q', q);
             if (region) p.set('ctpv', region);
             tasks.push(
@@ -533,59 +720,106 @@
             }
         });
 
+        // 테스트 파트너: 세종봉안당 — API 실패/미배포여도 프론트에서 항상 보강
+        if (cat === 'all' || cat === 'funeral') {
+            const merged = ensureSejongInList(items, q, region);
+            items.length = 0;
+            items.push(...merged);
+        }
+
+        const qLower = q.toLowerCase();
+        function nameScore(it) {
+            if (!qLower) return it.id === 'sejong-columbarium' ? 500 : 0;
+            const name = String(it.name || '').toLowerCase();
+            const addr = String(it.address || '').toLowerCase();
+            if (it.id === 'sejong-columbarium' && (q.includes('세종') || q.includes('봉안'))) return 500;
+            if (name === qLower) return 400;
+            if (name.startsWith(qLower)) return 300;
+            if (name.includes(qLower)) return 200;
+            if (addr.includes(qLower)) return 100;
+            return 0;
+        }
+        items.sort((a, b) => nameScore(b) - nameScore(a) || a.name.localeCompare(b.name, 'ko'));
+
         if (!items.length) {
+            // API 전부 실패해도 세종봉안당은 보이게
+            if (cat !== 'cemetery') {
+                showPartnerFacilities(`검색 결과 없음 — 테스트 시설(세종봉안당)만 표시합니다.${errors.length ? ` (API: ${errors.join(', ')})` : ''}`);
+                return;
+            }
             const errNote = errors.length
                 ? ` (API 오류: ${errors.join(', ')} — ${apiBase})`
                 : '';
-            setStatus(`검색 결과가 없습니다.${errNote}`);
+            setStatus(`"${q || region || '조건'}"에 맞는 시설이 없습니다.${errNote}`);
+            listEl.innerHTML = '';
             return;
         }
 
-        setStatus(`${items.length}곳 검색됨`);
-        listEl.innerHTML = items.map((it, idx) => {
-            const meta = [it.region, it.sigungu, it.address].filter(Boolean).join(' · ');
-            const links = linkHtml(it, { compact: true });
-            return `
-                <article class="columb-search__card" role="listitem" data-idx="${idx}">
-                    <span class="columb-search__card-badge">${esc(it.kindLabel)}</span>
-                    <strong class="columb-search__card-name">${esc(it.name)}</strong>
-                    ${meta ? `<span class="columb-search__card-meta">${esc(meta)}</span>` : ''}
-                    ${it.phone ? `<span class="columb-search__card-phone">${esc(it.phone)}</span>` : ''}
-                    ${links ? `<div class="columb-search__card-links">${links}</div>` : ''}
-                    <button type="button" class="columb-search__card-cta" data-select="${idx}">이 시설 보기</button>
-                </article>
-            `;
-        }).join('');
+        const nameHits = q ? items.filter((it) => String(it.name || '').includes(q)).length : items.length;
+        setStatus(q
+            ? `"${q}" 검색 ${items.length}곳 (시설명 일치 ${nameHits}곳)`
+            : `${items.length}곳 검색됨`);
+        renderFacilityCards(items, q);
+    }
 
-        listEl.querySelectorAll('[data-select]').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                const idx = Number(btn.getAttribute('data-select'));
-                const facility = items[idx];
-                if (!facility) return;
-                listEl.querySelectorAll('.columb-search__card').forEach((b) => b.classList.remove('is-active'));
-                btn.closest('.columb-search__card')?.classList.add('is-active');
-                applyFacility(facility);
-            });
-        });
+    let searchTimer = null;
+    function scheduleSearch() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => { searchFacilities(); }, 320);
     }
 
     searchBtn?.addEventListener('click', () => { searchFacilities(); });
     keywordEl?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
+            clearTimeout(searchTimer);
             searchFacilities();
         }
     });
-    // 구분/시도 변경만으로는 검색하지 않음 — 검색 버튼·Enter 로만 결과 표시
+    keywordEl?.addEventListener('input', () => {
+        const q = (keywordEl.value || '').trim();
+        if (q.length >= 2 || (regionEl?.value || '').trim() || (catEl?.value || 'all') !== 'all') {
+            scheduleSearch();
+        } else if (!q) {
+            clearTimeout(searchTimer);
+            showPartnerFacilities('테스트 시설: 세종봉안당 — 시설명·시도를 입력하면 전체 검색합니다.');
+        }
+    });
 
-    // ── 최초 렌더 (검색 결과는 비움 — 새로고침 시 자동 목록 없음) ──
+    let memorialTimer = null;
+    memorialKeywordEl?.addEventListener('input', () => {
+        clearTimeout(memorialTimer);
+        memorialTimer = setTimeout(() => {
+            memorialNameFilter = (memorialKeywordEl.value || '').trim();
+            clearSlotCache();
+            loadLayoutFromDb();
+        }, 300);
+    });
+    memorialKeywordEl?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            clearTimeout(memorialTimer);
+            memorialNameFilter = (memorialKeywordEl.value || '').trim();
+            clearSlotCache();
+            loadLayoutFromDb();
+        }
+    });
+
+    // ── 최초 렌더: 세종봉안당 기본 선택 + 목록 노출 ──
     draw();
+    applyFacility(SEJONG_FACILITY);
+    showPartnerFacilities('테스트 시설: 세종봉안당 (기본 선택됨)');
     window.addEventListener('resize', draw);
 
-    if (listEl) listEl.innerHTML = '';
-    setStatus('시설명·주소 또는 시도를 선택한 뒤 검색해 주세요.');
-
-    loadRegions().catch(() => {
+    loadRegions().then(() => {
+        // 시도 목록에 세종이 없으면 추가
+        if (regionEl && ![...regionEl.options].some((o) => (o.value || '').includes('세종'))) {
+            const opt = document.createElement('option');
+            opt.value = '세종특별자치시';
+            opt.textContent = '세종특별자치시';
+            regionEl.appendChild(opt);
+        }
+    }).catch(() => {
         setStatus(`시도 목록을 불러오지 못했습니다. API: ${apiBase}`);
     });
 })();
