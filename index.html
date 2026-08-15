@@ -26,7 +26,7 @@
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/memorial.css?v=20260809-plans-gap2">
+    <link rel="stylesheet" href="css/memorial.css?v=20260814-search-btns">
     <!-- eternal_memory 연동 (로컬 호스트에서는 JS가 localhost로 자동 전환) -->
     <meta name="eruso-api-base" content="https://api.erum2026.co.kr">
     <meta name="eruso-app-base" content="https://erum2026.co.kr">
@@ -471,7 +471,7 @@
                                 <i class="fas fa-magnifying-glass"></i>
                                 <input id="columbKeyword" type="search" placeholder="시설명 입력 (예: 서울추모공원)" autocomplete="off" />
                             </label>
-                            <button id="columbSearchBtn" type="button" class="btn btn-secondary" style="white-space:nowrap;">
+                            <button id="columbSearchBtn" type="button" class="btn btn-secondary columb-search__btn">
                                 <i class="fas fa-search"></i>
                                 검색
                             </button>
@@ -479,13 +479,6 @@
                     </div>
                     <div id="columbSearchStatus" class="columb-search__status" aria-live="polite">시설명을 입력하거나 시도를 선택한 뒤 검색해 주세요.</div>
                     <div id="columbSearchList" class="columb-search__list" role="list"></div>
-                    <div class="columb-search__memorial-filter" style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-                        <label class="columb-search__input" aria-label="배치도 내 고인·추모관 이름 검색" style="flex:1;min-width:220px;">
-                            <i class="fas fa-user"></i>
-                            <input id="columbMemorialKeyword" type="search" placeholder="배치도에서 고인·추모관 이름 검색" autocomplete="off" />
-                        </label>
-                        <span id="columbLayoutStatus" class="columb-search__status" style="margin:0;" aria-live="polite"></span>
-                    </div>
                     <p class="columb-search__foot">
                         더 자세한 검색은 이루소 앱에서 이용할 수 있습니다.
                         <a id="columbAppFuneral" href="https://erum2026.co.kr/funeral-facility" target="_blank" rel="noopener">장례식장·추모공원</a>
@@ -518,7 +511,14 @@
                             <button class="columb-floor-tab" data-floor="2">2층</button>
                             <button class="columb-floor-tab" data-floor="3">3층</button>
                         </div>
-                        <div style="flex:1"></div>
+                        <div class="columb-toolbar__search-wrap">
+                            <label class="columb-toolbar__search" aria-label="고인·추모관 이름 검색">
+                                <i class="fas fa-user"></i>
+                                <input id="columbMemorialKeyword" type="search" placeholder="고인·추모관 검색" autocomplete="off" />
+                            </label>
+                            <button id="columbMemorialSearchBtn" type="button" class="columb-toolbar__btn columb-toolbar__btn--search">검색</button>
+                            <button id="columbMemorialResetBtn" type="button" class="columb-toolbar__btn columb-toolbar__btn--reset">초기화</button>
+                        </div>
                         <div class="columb-legend">
                             <span class="columb-legend-dot occupied"></span>공개
                             <span class="columb-legend-dot" style="background:rgba(140,110,70,0.88);"></span>비공개
@@ -526,7 +526,7 @@
                             <span class="columb-legend-dot selected"></span>선택됨
                         </div>
                     </div>
-                    <p id="columbFacilityLabel" class="columb-facility-label">세종봉안당 배치도 (DB 추모관 기준)</p>
+                    <p id="columbFloorStats" class="columb-floor-stats" aria-live="polite"></p>
                     <canvas id="columbariumCanvas" width="900" height="520" style="width:100%;border-radius:12px;cursor:pointer;display:block;" aria-label="봉안당 배치도"></canvas>
                     <div class="columb-info-panel" id="columbInfoPanel" style="display:none">
                         <div id="columbInfoContent"></div>
@@ -1357,6 +1357,6 @@
 
     <script src="js/elevisorPresence.js?v=20260812-accesslog2"></script>
     <script src="js/main.js?v=20260812-hero-video"></script>
-    <script src="js/columbarium.js?v=20260814-db-shuffle"></script>
+    <script src="js/columbarium.js?v=20260814-search-btns"></script>
 </body>
 </html>
