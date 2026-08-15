@@ -500,17 +500,17 @@
                    style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;background:linear-gradient(135deg,#c8a96e,#a07840);color:#fff;border-radius:8px;font-size:13px;font-weight:800;text-decoration:none;">
                    ${goLabel}
                 </a>
-                <a href="#contact" onclick="document.getElementById('columbInfoPanel').style.display='none';"
-                   style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;background:rgba(255,255,255,0.08);color:#fff;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">
+                <button type="button" data-columb-consult="1"
+                   style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;background:rgba(255,255,255,0.08);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">
                    상담 신청
-                </a>
+                </button>
               </div>`;
         } else {
             actions = `<div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);display:flex;justify-content:center;">
-                <a href="#contact" onclick="document.getElementById('columbInfoPanel').style.display='none';"
-                   style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;background:linear-gradient(135deg,#c8a96e,#a07840);color:#fff;border-radius:8px;font-size:13px;font-weight:800;text-decoration:none;">
+                <button type="button" data-columb-consult="1"
+                   style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;background:linear-gradient(135deg,#c8a96e,#a07840);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;">
                    상담 신청
-                </a>
+                </button>
               </div>`;
         }
 
@@ -525,6 +525,46 @@
             ${actions}
         `;
         infoPanel.style.display = 'block';
+
+        infoContent.querySelector('[data-columb-consult]')?.addEventListener('click', () => {
+            goToConsultForm(cell);
+        });
+    }
+
+    function goToConsultForm(cell) {
+        if (infoPanel) infoPanel.style.display = 'none';
+
+        const svc = document.getElementById('serviceType');
+        if (svc) {
+            const want = '봉안당/납골당 분양 상담';
+            const opt = Array.from(svc.options).find((o) => o.value === want || o.textContent.includes('분양'));
+            svc.value = opt ? opt.value : want;
+        }
+
+        const msg = document.getElementById('contactMessage');
+        if (msg) {
+            const fac = selectedFacility?.name || '봉안당';
+            const niche = cell?.id ? `${activeZone}동 ${activeFloor}층 / ${cell.id}` : `${activeZone}동 ${activeFloor}층`;
+            const preset = `${fac} ${niche} 봉안함 분양 상담을 요청합니다.`;
+            if (!msg.value.trim() || msg.value.includes('분양 상담')) {
+                msg.value = preset;
+            }
+        }
+
+        const target = document.getElementById('cyber-apply')
+            || document.getElementById('contactForm')
+            || document.getElementById('contact');
+        if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        // 해시로도 맞춤 (공유·뒤로가기)
+        try {
+            history.replaceState(null, '', '#cyber-apply');
+        } catch (_) { /* ignore */ }
+
+        window.setTimeout(() => {
+            document.getElementById('contactName')?.focus({ preventScroll: true });
+        }, 400);
     }
 
     if (infoClose) {
