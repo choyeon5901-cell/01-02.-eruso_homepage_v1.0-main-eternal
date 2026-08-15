@@ -4254,10 +4254,47 @@ button {
     display: flex;
     flex-direction: column;
     gap: 16px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: visible;
+}
+.contact-section .contact-form .form-row,
+.contact-section .contact-form .form-row-2col {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+.contact-section .contact-form input,
+.contact-section .contact-form select,
+.contact-section .contact-form textarea {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+.contact-section .contact-form select#serviceType {
+    display: block;
+    height: auto;
+    min-height: 48px;
+    padding: 12px 40px 12px 14px;
+    line-height: 1.35;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, #666 50%), linear-gradient(135deg, #666 50%, transparent 50%);
+    background-position: calc(100% - 18px) calc(50% - 3px), calc(100% - 12px) calc(50% - 3px);
+    background-size: 6px 6px, 6px 6px;
+    background-repeat: no-repeat;
+    background-color: #fafaf8;
 }
 .form-row-2col {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 14px;
 }
 @media (max-width: 500px) {
