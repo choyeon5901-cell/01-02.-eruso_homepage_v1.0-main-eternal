@@ -17,10 +17,21 @@
 
     // ── API base (memorial embed와 동일) ───────────────────────
     const host = (location.hostname || '').toLowerCase();
-    const isLocal = host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local');
+    // file:// · Live Server · LAN IP 도 로컬 API로
+    const isLocal = !host
+        || host === 'localhost'
+        || host === '127.0.0.1'
+        || host === '[::1]'
+        || host.endsWith('.local')
+        || /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host);
     const metaApi = document.querySelector('meta[name="eruso-api-base"]')?.getAttribute('content');
     const metaApp = document.querySelector('meta[name="eruso-app-base"]')?.getAttribute('content');
-    const apiBase = (isLocal ? 'http://localhost:1210' : (metaApi || 'https://api.erum2026.co.kr')).replace(/\/$/, '');
+    const qsApi = new URLSearchParams(location.search).get('api'); // ?api=local|prod
+    const apiBase = (
+        qsApi === 'local' ? 'http://localhost:1210'
+        : qsApi === 'prod' ? 'https://api.erum2026.co.kr'
+        : (isLocal ? 'http://localhost:1210' : (metaApi || 'https://api.erum2026.co.kr'))
+    ).replace(/\/$/, '');
     const appBase = (isLocal ? 'http://localhost:1200' : (metaApp || 'https://erum2026.co.kr')).replace(/\/$/, '');
 
     const appFuneralEl = document.getElementById('columbAppFuneral');
@@ -32,7 +43,7 @@
     const COLS = 10;
     const ROWS = 6;
     const PAD_LEFT   = 52;
-    const PAD_TOP    = 40;
+    const PAD_TOP    = 58; // 시설·동층 제목 + 열 번호 여유
     const GAP        = 6;
     const CELL_W     = Math.floor((canvas.width - PAD_LEFT - 24 - GAP * (COLS - 1)) / COLS);
     const CELL_H     = Math.floor((canvas.height - PAD_TOP - 24 - GAP * (ROWS - 1)) / ROWS);
@@ -60,12 +71,75 @@
     const cache = {};
     let layoutLoadSeq = 0;
 
-    const layoutStatusEl = document.getElementById('columbLayoutStatus');
     const memorialKeywordEl = document.getElementById('columbMemorialKeyword');
+    const floorStatsEl = document.getElementById('columbFloorStats');
+    let searchJumpLock = false;
 
-    function setLayoutStatus(msg) {
-        if (layoutStatusEl) layoutStatusEl.textContent = msg || '';
+    function setZoneFloorTabs(zone, floor) {
+        activeZone = zone;
+        activeFloor = floor;
+        document.querySelectorAll('.columb-zone-tab').forEach((b) => {
+            b.classList.toggle('active', b.dataset.zone === zone);
+        });
+        document.querySelectorAll('.columb-floor-tab').forEach((b) => {
+            b.classList.toggle('active', b.dataset.floor === floor);
+        });
     }
+
+    function selectHitCell(hit, data) {
+        if (!hit) return;
+        let r = hit.row ? hit.row - 1 : -1;
+        let c = hit.col ? hit.col - 1 : -1;
+        if (r < 0 || c < 0) {
+            const roomId = hit.memorial_room_id;
+            for (let rr = 0; rr < ROWS; rr++) {
+                for (let cc = 0; cc < COLS; cc++) {
+                    const cell = data[`${rr}-${cc}`];
+                    if (!cell) continue;
+                    if ((roomId && cell.memorial_room_id === roomId) || cell.matched) {
+                        r = rr;
+                        c = cc;
+                        break;
+                    }
+                }
+                if (r >= 0) break;
+            }
+        }
+        if (r < 0 || c < 0) return;
+        selectedCell = { r, c };
+        draw();
+        showInfo(r, c);
+    }
+
+    function renderFloorStats(payload) {
+        if (!floorStatsEl) return;
+        const stats = Array.isArray(payload?.floor_stats) ? payload.floor_stats : null;
+        const cap = payload?.capacity_on_page || (COLS * ROWS);
+        const hitCount = payload?.search_hit_count || 0;
+        const hitNote = payload?.search_q
+            ? (hitCount
+                ? `<span class="sep">|</span><span class="is-current">검색 ${hitCount}건</span>`
+                : `<span class="sep">|</span><span>검색 결과 없음</span>`)
+            : '';
+        if (!stats || !stats.length) {
+            const occ = payload?.occupied_on_page || 0;
+            const avail = Math.max(0, (payload?.available_on_page ?? (cap - occ)));
+            floorStatsEl.innerHTML =
+                `<span class="is-current">${activeZone}${activeFloor}층</span>` +
+                ` 전체 ${cap} · 사용중 ${occ} · 사용가능 ${avail}${hitNote}`;
+            return;
+        }
+        floorStatsEl.innerHTML = stats.map((s) => {
+            const z = s.zone || activeZone;
+            const f = s.floor || '';
+            const capacity = s.capacity ?? cap;
+            const occ = s.occupied ?? 0;
+            const avail = s.available ?? Math.max(0, capacity - occ);
+            const cur = String(f) === String(activeFloor) ? ' is-current' : '';
+            return `<span class="${cur.trim()}">${z}${f}층 전체 ${capacity} · 사용중 ${occ} · 사용가능 ${avail}</span>`;
+        }).join('<span class="sep">|</span>') + hitNote;
+    }
+
 
     function facilityKey() {
         return selectedFacility?.id || selectedFacility?.name || 'sejong-columbarium';
@@ -130,6 +204,7 @@
                 occupied: !!cell.occupied,
                 name: cell.name || null,
                 title: cell.title || null,
+                deceased_name: cell.deceased_name || null,
                 birth: cell.birth || null,
                 death: cell.death || null,
                 memorial_room_id: cell.memorial_room_id || null,
@@ -140,6 +215,8 @@
                 href: go,
                 matched: !!cell.matched,
                 price: cell.occupied ? null : '상담 문의',
+                columbarium_name: cell.columbarium_name || null,
+                columbarium_kind: cell.columbarium_kind || null,
             };
         });
         return data;
@@ -147,58 +224,73 @@
 
     async function loadLayoutFromDb() {
         const seq = ++layoutLoadSeq;
-        const key = cacheKey();
-        if (cache[key]) {
-            layoutMeta = cache[key]._meta || layoutMeta;
-            setLayoutStatus(layoutStatusText(layoutMeta));
-            draw();
-            return cache[key];
-        }
-
-        setLayoutStatus('배치도 불러오는 중…');
+        // 세션 캐시 없음 — DB/공개여부 변경이 바로 반영되도록 매번 API 호출
         const p = new URLSearchParams({
             zone: activeZone,
             floor: activeFloor,
             cols: String(COLS),
             rows: String(ROWS),
             facility_key: facilityKey(),
+            _ts: String(Date.now()),
         });
+        if (selectedFacility?.name) p.set('facility_name', selectedFacility.name);
         if (memorialNameFilter) p.set('q', memorialNameFilter);
 
         try {
             const payload = await fetchJson(`${apiBase}/api/memorial-rooms/columbarium-layout?${p}`);
             if (seq !== layoutLoadSeq) return emptyGrid();
+
+            // 고인 검색: 다른 동·층에 있으면 그곳으로 이동
+            if (memorialNameFilter && !searchJumpLock) {
+                const hits = Array.isArray(payload.search_hits) ? payload.search_hits : [];
+                const hit = hits.find((h) => h && h.zone && h.floor);
+                if (hit && (hit.zone !== activeZone || String(hit.floor) !== String(activeFloor))) {
+                    searchJumpLock = true;
+                    setZoneFloorTabs(hit.zone, String(hit.floor));
+                    clearSlotCache();
+                    const jumped = await loadLayoutFromDb();
+                    searchJumpLock = false;
+                    return jumped;
+                }
+            }
+
             const data = cellsToData(payload.cells);
             layoutMeta = {
                 total_rooms: payload.total_rooms || 0,
                 public_rooms: payload.public_rooms || 0,
                 private_rooms: payload.private_rooms || 0,
                 occupied_on_page: payload.occupied_on_page || 0,
+                available_on_page: payload.available_on_page || 0,
+                capacity_on_page: payload.capacity_on_page || (COLS * ROWS),
+                floor_stats: payload.floor_stats || [],
+                search_hits: payload.search_hits || [],
                 source: payload.source || 'db',
             };
             data._meta = layoutMeta;
-            cache[key] = data;
-            setLayoutStatus(layoutStatusText(layoutMeta));
+            cache[cacheKey()] = data;
+            renderFloorStats(payload);
             draw();
+
+            if (memorialNameFilter) {
+                const hits = layoutMeta.search_hits || [];
+                const hit = hits.find((h) => h && h.on_current_page)
+                    || hits.find((h) => h && h.zone === activeZone && String(h.floor) === String(activeFloor))
+                    || hits[0];
+                if (hit) selectHitCell(hit, data);
+            }
+            searchJumpLock = false;
             return data;
         } catch (err) {
             if (seq !== layoutLoadSeq) return emptyGrid();
-            // API 미배포 시: 가짜 이름 중복 채우지 않음 — 빈 칸 + 안내
             layoutMeta = { total_rooms: 0, public_rooms: 0, private_rooms: 0, occupied_on_page: 0, source: 'error' };
             const data = emptyGrid();
             data._meta = layoutMeta;
-            cache[key] = data;
-            setLayoutStatus(`배치 API 연결 필요 (전체·공개·비공개 실데이터). API: ${apiBase}`);
+            cache[cacheKey()] = data;
+            if (floorStatsEl) floorStatsEl.textContent = '';
+            searchJumpLock = false;
             draw();
             return data;
         }
-    }
-
-    function layoutStatusText(meta) {
-        const m = meta || {};
-        if (m.source === 'error') return `배치 API 연결 필요 — ${apiBase}`;
-        if (m.source !== 'memorial_rooms_db_shuffled' && m.source !== 'db') return '';
-        return `전체 ${m.total_rooms || 0} · 공개 ${m.public_rooms || 0} · 비공개 ${m.private_rooms || 0} · 이 층 ${m.occupied_on_page || 0}칸`;
     }
 
     function getData() {
@@ -248,6 +340,16 @@
         ctx.fillStyle = bg;
         ctx.fillRect(0, 0, W, H);
 
+        // 상단 제목 — 배치도 전체 기준 가운데
+        const title = selectedFacility
+            ? `${selectedFacility.name} · ${activeZone}동 ${activeFloor}층`
+            : `${activeZone}동 ${activeFloor}층`;
+        ctx.fillStyle = 'rgba(200,169,110,0.9)';
+        ctx.font = 'bold 13px "Noto Sans KR", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText(title.length > 40 ? title.slice(0, 39) + '…' : title, W / 2, 6);
+
         ctx.fillStyle = COLOR.label;
         ctx.font = 'bold 13px "Noto Sans KR", sans-serif';
         ctx.textAlign = 'right';
@@ -261,7 +363,7 @@
         ctx.textBaseline = 'bottom';
         for (let c = 0; c < COLS; c++) {
             const rect = cellRect(0, c);
-            ctx.fillText(`${c + 1}`, rect.x + CELL_W / 2, PAD_TOP - 6);
+            ctx.fillText(`${c + 1}`, rect.x + CELL_W / 2, PAD_TOP - 8);
         }
 
         for (let r = 0; r < ROWS; r++) {
@@ -314,15 +416,6 @@
                 }
             }
         }
-
-        const title = selectedFacility
-            ? `${selectedFacility.name} · ${activeZone}동 ${activeFloor}층`
-            : `${activeZone}동 ${activeFloor}층`;
-        ctx.fillStyle = 'rgba(200,169,110,0.9)';
-        ctx.font = 'bold 14px "Noto Sans KR", sans-serif';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'top';
-        ctx.fillText(title.length > 36 ? title.slice(0, 35) + '…' : title, PAD_LEFT, 8);
     }
 
     // ── 인터랙션 ──────────────────────────────────────────────
@@ -379,6 +472,9 @@
         const facilityLine = selectedFacility
             ? `<p style="font-size:12px;color:rgba(200,169,110,0.75);margin:0 0 6px;">${esc(selectedFacility.name)}</p>`
             : '';
+        const columbLine = cell.occupied && (cell.columbarium_name || cell.columbarium_kind)
+            ? `<p style="font-size:12px;color:rgba(240,240,240,0.55);margin:0 0 6px;">${esc([cell.columbarium_name, cell.columbarium_kind].filter(Boolean).join(' · '))}</p>`
+            : '';
 
         const badge = cell.occupied
             ? (cell.is_public
@@ -387,8 +483,9 @@
             : '<span style="background:rgba(48,200,140,0.8);color:#082820;border-radius:6px;padding:2px 10px;font-size:12px;font-weight:800;">분양가능</span>';
 
         const detail = cell.occupied
-            ? `<p style="margin:10px 0 0;font-size:14px;color:rgba(240,240,240,0.75);">故 <strong style="font-size:16px;color:#f0f0f0;">${esc(cell.name || '—')}</strong></p>
-               ${cell.title ? `<p style="font-size:12px;color:rgba(240,240,240,0.55);margin:4px 0 0;">${esc(cell.title)}</p>` : ''}
+            ? `<p style="margin:10px 0 0;font-size:14px;color:rgba(240,240,240,0.75);"><strong style="font-size:16px;color:#f0f0f0;">${esc(cell.name || cell.title || '—')}</strong></p>
+               ${cell.deceased_name && cell.deceased_name !== cell.name ? `<p style="font-size:12px;color:rgba(240,240,240,0.55);margin:4px 0 0;">故 ${esc(cell.deceased_name)}</p>` : ''}
+               ${cell.title && cell.title !== cell.name ? `<p style="font-size:12px;color:rgba(240,240,240,0.55);margin:4px 0 0;">${esc(cell.title)}</p>` : ''}
                <p style="font-size:12px;color:rgba(240,240,240,0.5);margin:4px 0 0;">생년월일: ${esc(cell.birth || '—')}</p>
                <p style="font-size:12px;color:rgba(240,240,240,0.5);">사망일: ${esc(cell.death || '—')}</p>`
             : `<p style="margin:10px 0 0;font-size:13px;color:rgba(240,240,240,0.65);">분양 상담 가능합니다.</p>
@@ -419,6 +516,7 @@
 
         infoContent.innerHTML = `
             ${facilityLine}
+            ${columbLine}
             <p style="font-size:13px;color:rgba(200,169,110,0.8);font-weight:700;margin:0 0 4px;">
                 ${activeZone}동 ${activeFloor}층 / ${esc(cell.id)}
             </p>
@@ -465,7 +563,6 @@
     const selectedMetaEl = document.getElementById('columbSelectedMeta');
     const selectedBadgeEl = document.getElementById('columbSelectedBadge');
     const selectedLinksEl = document.getElementById('columbSelectedLinks');
-    const facilityLabelEl = document.getElementById('columbFacilityLabel');
     const clearBtn = document.getElementById('columbClearSelect');
 
     function toAbsoluteUrl(url) {
@@ -497,7 +594,7 @@
         return parts.join('');
     }
 
-    function applyFacility(facility) {
+    function applyFacility(facility, { scroll = true } = {}) {
         selectedFacility = facility;
         clearSlotCache();
 
@@ -509,16 +606,12 @@
                 .filter(Boolean);
             if (selectedMetaEl) selectedMetaEl.textContent = metaParts.join(' · ');
             if (selectedLinksEl) selectedLinksEl.innerHTML = linkHtml(facility);
-            if (facilityLabelEl) {
-                facilityLabelEl.textContent = `${facility.name} 배치도 · DB 추모관을 동·층에 무작위 배치 (중복 없음)`;
+            if (scroll) {
+                document.getElementById('columbariumSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
-            document.getElementById('columbariumSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         } else if (selectedEl) {
             selectedEl.hidden = true;
             if (selectedLinksEl) selectedLinksEl.innerHTML = '';
-            if (facilityLabelEl) {
-                facilityLabelEl.textContent = '시설을 선택하면 DB 추모관 기준 봉안당 배치도가 표시됩니다.';
-            }
         }
         loadLayoutFromDb();
     }
@@ -799,27 +892,42 @@
     });
 
     let memorialTimer = null;
-    memorialKeywordEl?.addEventListener('input', () => {
+    function runMemorialSearch() {
         clearTimeout(memorialTimer);
-        memorialTimer = setTimeout(() => {
-            memorialNameFilter = (memorialKeywordEl.value || '').trim();
-            clearSlotCache();
-            loadLayoutFromDb();
-        }, 300);
-    });
-    memorialKeywordEl?.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            clearTimeout(memorialTimer);
-            memorialNameFilter = (memorialKeywordEl.value || '').trim();
+        memorialNameFilter = (memorialKeywordEl?.value || '').trim();
+        searchJumpLock = false;
+        clearSlotCache();
+        loadLayoutFromDb();
+    }
+    function resetMemorialSearch() {
+        clearTimeout(memorialTimer);
+        if (memorialKeywordEl) memorialKeywordEl.value = '';
+        memorialNameFilter = '';
+        searchJumpLock = false;
+        selectedCell = null;
+        if (infoPanel) infoPanel.style.display = 'none';
+        clearSlotCache();
+        loadLayoutFromDb();
+    }
+    // 탭 다시 보이면 DB 최신값 재조회
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && selectedFacility) {
             clearSlotCache();
             loadLayoutFromDb();
         }
     });
+    memorialKeywordEl?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            runMemorialSearch();
+        }
+    });
+    document.getElementById('columbMemorialSearchBtn')?.addEventListener('click', runMemorialSearch);
+    document.getElementById('columbMemorialResetBtn')?.addEventListener('click', resetMemorialSearch);
 
-    // ── 최초 렌더: 세종봉안당 기본 선택 + 목록 노출 ──
+    // ── 최초 렌더: 세종봉안당 기본 선택(스크롤 없이 히어로 영상 유지) + 목록 노출 ──
     draw();
-    applyFacility(SEJONG_FACILITY);
+    applyFacility(SEJONG_FACILITY, { scroll: false });
     showPartnerFacilities('테스트 시설: 세종봉안당 (기본 선택됨)');
     window.addEventListener('resize', draw);
 
