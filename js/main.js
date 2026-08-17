@@ -846,96 +846,11 @@ function initContactForm() {
     const form    = document.getElementById('contactForm');
     const notice  = document.getElementById('contactNotice');
     const submitBtn = document.getElementById('contactSubmitBtn');
-    const detailEl = document.getElementById('memorialDetailFields');
-    const memorialModal = document.getElementById('memorialModal');
-    const memorialEntry = document.getElementById('memorialDetailEntry');
-    const memorialSummary = document.getElementById('memorialDetailSummary');
-    const openMemorialBtn = document.getElementById('openMemorialModalBtn');
-    const confirmMemorialBtn = document.getElementById('confirmMemorialModalBtn');
-    const memorialNameEl = document.getElementById('memorialName');
-    const roomTitleEl = document.getElementById('roomTitle');
-    const descEl = document.getElementById('description');
-    const descCount = document.getElementById('descriptionCount');
-    const photoInput = document.getElementById('photoFile');
-    const videoInput = document.getElementById('videoFile');
-    const videoUrlInput = document.getElementById('videoUrl');
-    const videoFilePanel = document.getElementById('videoFilePanel');
-    const videoUrlPanel = document.getElementById('videoUrlPanel');
-    const photoPreview = document.getElementById('photoPreview');
-    const photoPickText = document.getElementById('photoPickText');
-    const videoPickText = document.getElementById('videoPickText');
-    let videoMode = 'file';
     if (!form) return;
 
-    function updateMemorialSummary() {
-        if (!memorialSummary || !openMemorialBtn) return;
-        const name = memorialNameEl?.value.trim() || '';
-        const title = roomTitleEl?.value.trim() || '';
-        if (!name) {
-            memorialSummary.hidden = true;
-            openMemorialBtn.textContent = '추모관 정보 입력하기';
-            return;
-        }
-        memorialSummary.hidden = false;
-        memorialSummary.textContent = title
-            ? `입력됨: ${name} · ${title}`
-            : `입력됨: ${name}`;
-        openMemorialBtn.textContent = '추모관 정보 수정하기';
-    }
-
-    function openMemorialModal() {
-        if (!memorialModal) return;
-        memorialModal.hidden = false;
-        document.body.classList.add('memorial-modal-open');
-        window.setTimeout(() => memorialNameEl?.focus(), 40);
-    }
-
-    function closeMemorialModal() {
-        if (!memorialModal) return;
-        memorialModal.hidden = true;
-        document.body.classList.remove('memorial-modal-open');
-        updateMemorialSummary();
-    }
-
-    openMemorialBtn?.addEventListener('click', openMemorialModal);
-    confirmMemorialBtn?.addEventListener('click', () => {
-        if (isMemorialSelected() && !memorialNameEl?.value.trim()) {
-            memorialNameEl?.reportValidity?.();
-            memorialNameEl?.focus();
-            return;
-        }
-        closeMemorialModal();
-    });
-    memorialModal?.querySelectorAll('[data-close-memorial-modal]').forEach((el) => {
-        el.addEventListener('click', closeMemorialModal);
-    });
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && memorialModal && !memorialModal.hidden) {
-            closeMemorialModal();
-        }
-    });
-
-    function setVideoMode(mode) {
-        videoMode = mode === 'url' ? 'url' : 'file';
-        form.querySelectorAll('[data-video-mode]').forEach((btn) => {
-            const on = btn.getAttribute('data-video-mode') === videoMode;
-            btn.classList.toggle('is-active', on);
-            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-        });
-        if (videoFilePanel) videoFilePanel.hidden = videoMode !== 'file';
-        if (videoUrlPanel) videoUrlPanel.hidden = videoMode !== 'url';
-        if (videoMode === 'url' && videoInput) videoInput.value = '';
-        if (videoMode === 'file' && videoUrlInput) videoUrlInput.value = '';
-        if (videoMode === 'url' && videoPickText) {
-            videoPickText.textContent = '영상 등록';
-            videoPickText.style.color = '';
-        }
-    }
-
-    form.querySelectorAll('[data-video-mode]').forEach((btn) => {
-        btn.addEventListener('click', () => setVideoMode(btn.getAttribute('data-video-mode')));
-    });
-    setVideoMode('file');
+    let memorialDraft = window.erusoMemorialDraft || null;
+    let memorialPopup = null;
+    window.erusoMemorialDraft = memorialDraft;
 
     function getServiceType() {
         return form.querySelector('input[name="serviceType"]:checked')?.value || '';
@@ -952,43 +867,240 @@ function initContactForm() {
         syncMemorialFields();
     }
 
-    const toBase64 = (file) => new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
-
     function isMemorialSelected() {
         return getServiceType() === MEMORIAL_SERVICE;
     }
 
+    function openMemorialPopup() {
+        const w = 740;
+        const h = Math.min(900, Math.max(640, (window.screen?.availHeight || 900) - 80));
+        const left = Math.max(0, Math.round(((window.screen?.availWidth || 1200) - w) / 2));
+        const top = Math.max(0, Math.round(((window.screen?.availHeight || 800) - h) / 2));
+        const url = new URL('memorial-apply.html', window.location.href).href;
+        if (memorialPopup && !memorialPopup.closed) {
+            memorialPopup.focus();
+            return memorialPopup;
+        }
+        memorialPopup = window.open(
+            url,
+            'erusoMemorialApply',
+            `popup=yes,width=${w},height=${h},left=${left},top=${top},scrollbars=yes,resizable=yes`
+        );
+        if (!memorialPopup) {
+            if (notice) {
+                notice.className = 'form-notice error';
+                notice.textContent = '팝업이 차단되었습니다. 브라우저에서 팝업을 허용해 주세요.';
+                notice.style.display = 'block';
+            } else {
+                window.alert('팝업이 차단되었습니다. 브라우저에서 팝업을 허용해 주세요.');
+            }
+            return null;
+        }
+        return memorialPopup;
+    }
+
     function syncMemorialFields(openIfMemorial) {
         const memorial = isMemorialSelected();
-        if (memorialEntry) memorialEntry.hidden = !memorial;
-        if (memorialNameEl) memorialNameEl.required = memorial;
-        const hint = document.getElementById('memorialTypeHint');
-        if (hint) hint.hidden = !memorial;
         const msg = document.getElementById('contactMessage');
         if (msg) {
             msg.placeholder = memorial
                 ? '개설 일정, 요금제 등 궁금하신 점'
                 : '궁금하신 사항을 자유롭게 입력해 주세요.';
         }
-        if (!memorial) closeMemorialModal();
-        else updateMemorialSummary();
-        if (openIfMemorial && memorial) openMemorialModal();
+        if (!memorial && memorialPopup && !memorialPopup.closed) {
+            memorialPopup.close();
+            memorialPopup = null;
+        }
+        if (openIfMemorial && memorial) openMemorialPopup();
     }
+
+    window.addEventListener('message', (event) => {
+        const data = event.data;
+        if (!data || data.type !== 'eruso-memorial-apply') return;
+        memorialDraft = data.draft || null;
+        window.erusoMemorialDraft = memorialDraft;
+        if (notice && memorialDraft?.memorialName) {
+            notice.className = 'form-notice success';
+            notice.textContent = `추모관 정보가 입력되었습니다. (${memorialDraft.memorialName}) 이용신청 접수하기를 눌러 주세요.`;
+            notice.style.display = 'block';
+        }
+    });
 
     form.querySelectorAll('input[name="serviceType"]').forEach((radio) => {
         radio.addEventListener('change', () => syncMemorialFields(true));
         if (radio.value === MEMORIAL_SERVICE) {
             radio.addEventListener('click', () => {
-                if (radio.checked) openMemorialModal();
+                if (radio.checked) openMemorialPopup();
             });
         }
     });
     syncMemorialFields(false);
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!form.checkValidity()) { form.reportValidity(); return; }
+
+        const memorial = isMemorialSelected();
+        if (memorial && !memorialDraft?.memorialName) {
+            if (notice) {
+                notice.className = 'form-notice error';
+                notice.textContent = '온라인 추모관 개설 정보를 팝업에서 입력해 주세요.';
+                notice.style.display = 'block';
+            }
+            openMemorialPopup();
+            return;
+        }
+
+        const metaApi = document.querySelector('meta[name="eruso-api-base"]')?.content;
+        const apiBase = (isLocal ? 'http://localhost:1210' : (metaApi || 'https://api.erum2026.co.kr')).replace(/\/$/, '');
+        const planCode = document.getElementById('selectedPlanCode')?.value || 'FREE';
+        const planLabel = document.getElementById('selectedPackage')?.value || PLAN_NAMES[planCode] || planCode;
+
+        const userMessage = form.querySelector('[name=message]')?.value.trim() || '';
+        let memorial_name = null;
+        let description = null;
+        let middle_description = null;
+        const msgParts = [];
+
+        if (memorial) {
+            const deceased = (memorialDraft.memorialName || '').trim();
+            const roomTitle = (memorialDraft.roomTitle || (deceased ? `故 ${deceased} 추모관` : '')).trim();
+            if (roomTitle) msgParts.push(`추모관 이름: ${roomTitle}`);
+            if (memorialDraft.memorialSubtitle) msgParts.push(`추모관 부제: ${memorialDraft.memorialSubtitle}`);
+            if (memorialDraft.birthDate) msgParts.push(`생년월일: ${memorialDraft.birthDate}`);
+            if (memorialDraft.deathDate) msgParts.push(`기일: ${memorialDraft.deathDate}`);
+            if (memorialDraft.relation) msgParts.push(`관계: ${memorialDraft.relation}`);
+            if (userMessage) msgParts.push(`추가 문의:\n${userMessage}`);
+            memorial_name = deceased;
+            description = memorialDraft.description || null;
+            middle_description = memorialDraft.middleDescription || null;
+        } else {
+            if (userMessage) msgParts.push(userMessage);
+        }
+        msgParts.push(`[선택요금제] ${planLabel} (${planCode})`);
+
+        const payload = {
+            name: form.querySelector('[name=name]')?.value.trim(),
+            phone: form.querySelector('[name=phone]')?.value.trim(),
+            email: form.querySelector('[name=email]')?.value.trim() || null,
+            service_type: getServiceType(),
+            package_type: planLabel,
+            memorial_name,
+            description,
+            middle_description,
+            message: msgParts.filter(Boolean).join('\n') || null,
+            photo_b64: memorial ? memorialDraft.photo_b64 || null : null,
+            photo_ext: memorial ? memorialDraft.photo_ext || null : null,
+            video_b64: memorial ? memorialDraft.video_b64 || null : null,
+            video_ext: memorial ? memorialDraft.video_ext || null : null,
+            video_url: memorial ? memorialDraft.video_url || null : null,
+        };
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> 접수 중...';
+
+        try {
+            const endpoint = (payload.photo_b64 || payload.video_b64 || payload.video_url)
+                ? `${apiBase}/api/consultations/upload`
+                : `${apiBase}/api/consultations/`;
+            const resp = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (!resp.ok) throw new Error(await resp.text());
+
+            notice.className = 'form-notice success';
+            notice.textContent = memorial
+                ? '온라인 추모관 개설 신청이 접수되었습니다. 관리자 확인 후 연락드립니다. (1~2 영업일)'
+                : '이용신청이 접수되었습니다. 관리자 확인 후 연락드립니다. (1~2 영업일)';
+            notice.style.display = 'block';
+            form.reset();
+            memorialDraft = null;
+            window.erusoMemorialDraft = null;
+            setServiceType(MEMORIAL_SERVICE);
+            document.querySelector('.package-card[data-plan="FREE"]')?.click();
+            syncMemorialFields();
+        } catch (err) {
+            notice.className = 'form-notice error';
+            notice.textContent = '신청 중 오류가 발생했습니다. 전화로 문의해 주세요.';
+            notice.style.display = 'block';
+            console.error('[contact form]', err);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane" aria-hidden="true"></i> 이용신청 접수하기';
+        }
+    });
+}
+
+function initMemorialApplyPopup() {
+    const form = document.getElementById('memorialApplyForm');
+    if (!form) return;
+
+    const memorialNameEl = document.getElementById('memorialName');
+    const roomTitleEl = document.getElementById('roomTitle');
+    const descEl = document.getElementById('description');
+    const descCount = document.getElementById('descriptionCount');
+    const photoInput = document.getElementById('photoFile');
+    const videoInput = document.getElementById('videoFile');
+    const videoUrlInput = document.getElementById('videoUrl');
+    const videoFilePanel = document.getElementById('videoFilePanel');
+    const videoUrlPanel = document.getElementById('videoUrlPanel');
+    const photoPreview = document.getElementById('photoPreview');
+    const photoPickText = document.getElementById('photoPickText');
+    const videoPickText = document.getElementById('videoPickText');
+    const notice = document.getElementById('memorialApplyNotice');
+    const submitBtn = document.getElementById('memorialApplySubmit');
+    let videoMode = 'file';
+
+    function setVideoMode(mode) {
+        videoMode = mode === 'url' ? 'url' : 'file';
+        form.querySelectorAll('[data-video-mode]').forEach((btn) => {
+            const on = btn.getAttribute('data-video-mode') === videoMode;
+            btn.classList.toggle('is-active', on);
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+        if (videoFilePanel) videoFilePanel.hidden = videoMode !== 'file';
+        if (videoUrlPanel) videoUrlPanel.hidden = videoMode !== 'url';
+        if (videoMode === 'url' && videoInput) videoInput.value = '';
+        if (videoMode === 'file' && videoUrlInput) videoUrlInput.value = '';
+        if (videoMode === 'url' && videoPickText) {
+            videoPickText.textContent = '영상 파일 선택';
+            videoPickText.style.color = '';
+        }
+    }
+
+    form.querySelectorAll('[data-video-mode]').forEach((btn) => {
+        btn.addEventListener('click', () => setVideoMode(btn.getAttribute('data-video-mode')));
+    });
+    setVideoMode('file');
+
+    const draft = window.opener && !window.opener.closed ? window.opener.erusoMemorialDraft : null;
+    if (draft) {
+        if (memorialNameEl) memorialNameEl.value = draft.memorialName || '';
+        if (roomTitleEl) roomTitleEl.value = draft.roomTitle || '';
+        const subtitle = document.getElementById('memorialSubtitle');
+        const relation = document.getElementById('relation');
+        const birth = document.getElementById('birthDate');
+        const death = document.getElementById('deathDate');
+        const middle = document.getElementById('middleDescription');
+        if (subtitle) subtitle.value = draft.memorialSubtitle || '';
+        if (relation) relation.value = draft.relation || '';
+        if (birth) birth.value = draft.birthDate || '';
+        if (death) death.value = draft.deathDate || '';
+        if (descEl) descEl.value = draft.description || '';
+        if (middle) middle.value = draft.middleDescription || '';
+        if (descCount) descCount.textContent = String((descEl?.value || '').length);
+        if (draft.videoMode === 'url' || draft.video_url) {
+            setVideoMode('url');
+            if (videoUrlInput) videoUrlInput.value = draft.video_url || '';
+        }
+        if (draft.photo_b64 && photoPreview) {
+            photoPreview.src = draft.photo_b64;
+            photoPreview.hidden = false;
+            if (photoPickText) photoPickText.hidden = true;
+        }
+    }
 
     memorialNameEl?.addEventListener('input', () => {
         if (!roomTitleEl) return;
@@ -1008,8 +1120,7 @@ function initContactForm() {
     photoInput?.addEventListener('change', () => {
         const f = photoInput.files?.[0];
         if (!f || !photoPreview) return;
-        const url = URL.createObjectURL(f);
-        photoPreview.src = url;
+        photoPreview.src = URL.createObjectURL(f);
         photoPreview.hidden = false;
         if (photoPickText) photoPickText.hidden = true;
     });
@@ -1017,79 +1128,54 @@ function initContactForm() {
     videoInput?.addEventListener('change', () => {
         const f = videoInput.files?.[0];
         if (videoPickText) {
-            videoPickText.textContent = f ? f.name : '영상 등록';
+            videoPickText.textContent = f ? f.name : '영상 파일 선택';
             videoPickText.style.color = f ? '#1d4ed8' : '';
             videoPickText.style.wordBreak = 'break-all';
         }
     });
 
+    const toBase64 = (file) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        if (!form.checkValidity()) { form.reportValidity(); return; }
-
-        const memorial = isMemorialSelected();
-        if (memorial && !memorialNameEl?.value.trim()) {
-            notice.className = 'form-notice error';
-            notice.textContent = '고인 성함을 입력해 주세요.';
-            notice.style.display = 'block';
-            openMemorialModal();
+        if (!memorialNameEl?.value.trim()) {
+            if (notice) {
+                notice.className = 'form-notice error';
+                notice.textContent = '고인 성함을 입력해 주세요.';
+                notice.style.display = 'block';
+            }
             memorialNameEl?.focus();
             return;
         }
-
-        const metaApi = document.querySelector('meta[name="eruso-api-base"]')?.content;
-        const apiBase = (isLocal ? 'http://localhost:1210' : (metaApi || 'https://api.erum2026.co.kr')).replace(/\/$/, '');
-        const planCode = document.getElementById('selectedPlanCode')?.value || 'FREE';
-        const planLabel = document.getElementById('selectedPackage')?.value || PLAN_NAMES[planCode] || planCode;
-
-        const userMessage = form.querySelector('[name=message]')?.value.trim() || '';
-        let memorial_name = null;
-        let description = null;
-        let middle_description = null;
-        const msgParts = [];
-
-        if (memorial) {
-            const deceased = memorialNameEl.value.trim();
-            const roomTitle = (roomTitleEl?.value.trim() || (deceased ? `故 ${deceased} 추모관` : '')).trim();
-            if (roomTitle) msgParts.push(`추모관 이름: ${roomTitle}`);
-            const subtitle = form.querySelector('[name=memorialSubtitle]')?.value.trim();
-            if (subtitle) msgParts.push(`추모관 부제: ${subtitle}`);
-            const birth = form.querySelector('[name=birthDate]')?.value.trim();
-            const death = form.querySelector('[name=deathDate]')?.value.trim();
-            if (birth) msgParts.push(`생년월일: ${birth}`);
-            if (death) msgParts.push(`기일: ${death}`);
-            const relation = form.querySelector('[name=relation]')?.value.trim();
-            if (relation) msgParts.push(`관계: ${relation}`);
-            if (userMessage) msgParts.push(`추가 문의:\n${userMessage}`);
-            memorial_name = deceased;
-            description = form.querySelector('[name=description]')?.value.trim() || null;
-            middle_description = form.querySelector('[name=middleDescription]')?.value.trim() || null;
-        } else {
-            if (userMessage) msgParts.push(userMessage);
-        }
-        msgParts.push(`[선택요금제] ${planLabel} (${planCode})`);
-
-        let photo_b64 = null;
-        let photo_ext = null;
-        let video_b64 = null;
-        let video_ext = null;
         let video_url = null;
-        const photoFile = memorial ? photoInput?.files?.[0] : null;
-        const videoFile = memorial && videoMode === 'file' ? videoInput?.files?.[0] : null;
-        if (memorial && videoMode === 'url') {
+        if (videoMode === 'url') {
             const raw = (videoUrlInput?.value || '').trim();
-            if (raw) {
-                if (!/^https?:\/\//i.test(raw)) {
+            if (raw && !/^https?:\/\//i.test(raw)) {
+                if (notice) {
                     notice.className = 'form-notice error';
                     notice.textContent = '영상 URL은 http:// 또는 https:// 로 시작해야 합니다.';
                     notice.style.display = 'block';
-                    videoUrlInput?.focus();
-                    return;
                 }
-                video_url = raw.slice(0, 500);
+                videoUrlInput?.focus();
+                return;
             }
+            video_url = raw ? raw.slice(0, 500) : null;
         }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = '처리 중...';
         try {
+            let photo_b64 = draft?.photo_b64 || null;
+            let photo_ext = draft?.photo_ext || null;
+            let video_b64 = videoMode === 'file' ? (draft?.video_b64 || null) : null;
+            let video_ext = videoMode === 'file' ? (draft?.video_ext || null) : null;
+            const photoFile = photoInput?.files?.[0];
+            const videoFile = videoMode === 'file' ? videoInput?.files?.[0] : null;
             if (photoFile) {
                 photo_b64 = await toBase64(photoFile);
                 photo_ext = photoFile.name.split('.').pop().toLowerCase();
@@ -1098,68 +1184,37 @@ function initContactForm() {
                 video_b64 = await toBase64(videoFile);
                 video_ext = videoFile.name.split('.').pop().toLowerCase();
             }
+            const nextDraft = {
+                memorialName: memorialNameEl.value.trim(),
+                roomTitle: roomTitleEl?.value.trim() || '',
+                memorialSubtitle: document.getElementById('memorialSubtitle')?.value.trim() || '',
+                relation: document.getElementById('relation')?.value.trim() || '',
+                birthDate: document.getElementById('birthDate')?.value.trim() || '',
+                deathDate: document.getElementById('deathDate')?.value.trim() || '',
+                description: descEl?.value.trim() || '',
+                middleDescription: document.getElementById('middleDescription')?.value.trim() || '',
+                videoMode,
+                photo_b64,
+                photo_ext,
+                video_b64: videoMode === 'file' ? video_b64 : null,
+                video_ext: videoMode === 'file' ? video_ext : null,
+                video_url: videoMode === 'url' ? video_url : null,
+            };
+            if (window.opener && !window.opener.closed) {
+                window.opener.erusoMemorialDraft = nextDraft;
+                window.opener.postMessage({ type: 'eruso-memorial-apply', draft: nextDraft }, window.location.origin);
+            }
+            window.close();
         } catch (err) {
-            notice.className = 'form-notice error';
-            notice.textContent = '파일 읽기에 실패했습니다. 다른 파일로 다시 시도해 주세요.';
-            notice.style.display = 'block';
-            return;
-        }
-
-        const payload = {
-            name: form.querySelector('[name=name]')?.value.trim(),
-            phone: form.querySelector('[name=phone]')?.value.trim(),
-            email: form.querySelector('[name=email]')?.value.trim() || null,
-            service_type: getServiceType(),
-            package_type: planLabel,
-            memorial_name,
-            description,
-            middle_description,
-            message: msgParts.filter(Boolean).join('\n') || null,
-            photo_b64,
-            photo_ext,
-            video_b64,
-            video_ext,
-            video_url,
-        };
-
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> 접수 중...';
-
-        try {
-            const endpoint = (photo_b64 || video_b64 || video_url)
-                ? `${apiBase}/api/consultations/upload`
-                : `${apiBase}/api/consultations/`;
-            const resp = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-            });
-            if (!resp.ok) throw new Error(await resp.text());
-
-            notice.className = 'form-notice success';
-            notice.textContent = memorial
-                ? '온라인 추모관 개설 신청이 접수되었습니다. 관리자 확인 후 연락드립니다. (1~2 영업일)'
-                : '이용신청이 접수되었습니다. 관리자 확인 후 연락드립니다. (1~2 영업일)';
-            notice.style.display = 'block';
-            form.reset();
-            if (photoPreview) { photoPreview.hidden = true; photoPreview.removeAttribute('src'); }
-            if (photoPickText) { photoPickText.hidden = false; photoPickText.textContent = '사진 등록'; }
-            if (videoPickText) { videoPickText.textContent = '영상 등록'; videoPickText.style.color = ''; }
-            if (descCount) descCount.textContent = '0';
-            setVideoMode('file');
-            setServiceType(MEMORIAL_SERVICE);
-            closeMemorialModal();
-            updateMemorialSummary();
-            document.querySelector('.package-card[data-plan="FREE"]')?.click();
-            syncMemorialFields();
-        } catch (err) {
-            notice.className = 'form-notice error';
-            notice.textContent = '신청 중 오류가 발생했습니다. 전화로 문의해 주세요.';
-            notice.style.display = 'block';
-            console.error('[contact form]', err);
+            if (notice) {
+                notice.className = 'form-notice error';
+                notice.textContent = '파일 읽기에 실패했습니다. 다른 파일로 다시 시도해 주세요.';
+                notice.style.display = 'block';
+            }
+            console.error('[memorial apply]', err);
         } finally {
             submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-paper-plane" aria-hidden="true"></i> 이용신청 접수하기';
+            submitBtn.textContent = '입력 완료';
         }
     });
 }
@@ -1199,6 +1254,7 @@ function initCyberMemorialApply() {
 }
 
 document.addEventListener('DOMContentLoaded', initContactForm);
+document.addEventListener('DOMContentLoaded', initMemorialApplyPopup);
 document.addEventListener('DOMContentLoaded', initCyberMemorialApply);
 document.addEventListener('DOMContentLoaded', initReligionGuideTabs);
 document.addEventListener('DOMContentLoaded', initWorkflowGuideLang);
