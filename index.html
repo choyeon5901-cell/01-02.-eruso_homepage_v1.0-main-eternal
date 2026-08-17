@@ -26,7 +26,7 @@
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/memorial.css?v=20260817-chip-fix">
+    <link rel="stylesheet" href="css/memorial.css?v=20260817-video-url2">
     <!-- eternal_memory 연동 (로컬 호스트에서는 JS가 localhost로 자동 전환) -->
     <meta name="eruso-api-base" content="https://api.erum2026.co.kr">
     <meta name="eruso-app-base" content="https://erum2026.co.kr">
@@ -1366,32 +1366,41 @@
                                 <label for="middleDescription">추가 소개 · 금언 <span class="opt">(선택)</span></label>
                                 <textarea id="middleDescription" name="middleDescription" rows="2" placeholder="생애, 특별한 기억, 금언 등"></textarea>
                             </div>
-                            <div class="form-row-2col media-pick-row">
-                                <div class="form-row">
-                                    <label for="photoFile">영정사진 <span class="opt">(선택)</span></label>
-                                    <input type="file" id="photoFile" name="photoFile" class="visually-hidden" accept="image/*,.heic,.heif">
-                                    <label for="photoFile" class="media-pick-slot" id="photoPickLabel">
-                                        <svg class="media-pick-icon" width="28" height="28" viewBox="0 0 256 256" aria-hidden="true" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <rect x="32" y="48" width="192" height="160" rx="16" stroke="currentColor" stroke-width="12"/>
-                                            <circle cx="92" cy="108" r="20" stroke="currentColor" stroke-width="12"/>
-                                            <path d="M32 168l52-48 36 32 40-48 64 64" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
-                                        </svg>
-                                        <span id="photoPickText">사진 등록</span>
-                                        <img id="photoPreview" alt="선택한 영정" hidden>
-                                    </label>
-                                    <p class="form-hint">jpg, png, heic</p>
+                            <div class="form-row">
+                                <label for="photoFile">영정사진 <span class="opt">(선택)</span></label>
+                                <input type="file" id="photoFile" name="photoFile" class="visually-hidden" accept="image/*,.heic,.heif">
+                                <label for="photoFile" class="media-pick-slot" id="photoPickLabel">
+                                    <svg class="media-pick-icon" width="28" height="28" viewBox="0 0 256 256" aria-hidden="true" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <rect x="32" y="48" width="192" height="160" rx="16" stroke="currentColor" stroke-width="12"/>
+                                        <circle cx="92" cy="108" r="20" stroke="currentColor" stroke-width="12"/>
+                                        <path d="M32 168l52-48 36 32 40-48 64 64" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    <span id="photoPickText">사진 등록</span>
+                                    <img id="photoPreview" alt="선택한 영정" hidden>
+                                </label>
+                                <p class="form-hint">jpg, png, heic</p>
+                            </div>
+
+                            <div class="form-row video-register-block">
+                                <span class="form-label-text">추모 영상 <span class="opt">(선택)</span></span>
+                                <div class="media-mode-tabs" role="tablist" aria-label="추모 영상 등록 방식">
+                                    <button type="button" class="media-mode-tab is-active" data-video-mode="file" aria-pressed="true">파일 등록</button>
+                                    <button type="button" class="media-mode-tab" data-video-mode="url" aria-pressed="false">URL 등록</button>
                                 </div>
-                                <div class="form-row">
-                                    <label for="videoFile">추모 영상 <span class="opt">(선택)</span></label>
+                                <div id="videoFilePanel" class="video-mode-panel">
                                     <input type="file" id="videoFile" name="videoFile" class="visually-hidden" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov">
                                     <label for="videoFile" class="media-pick-slot" id="videoPickLabel">
                                         <svg class="media-pick-icon" width="28" height="28" viewBox="0 0 256 256" aria-hidden="true" fill="none" xmlns="http://www.w3.org/2000/svg">
                                             <rect x="24" y="56" width="152" height="144" rx="16" stroke="currentColor" stroke-width="12"/>
                                             <path d="M176 112l56-32v96l-56-32V112z" stroke="currentColor" stroke-width="12" stroke-linejoin="round"/>
                                         </svg>
-                                        <span id="videoPickText">영상 등록</span>
+                                        <span id="videoPickText">영상 파일 선택</span>
                                     </label>
                                     <p class="form-hint">mp4, webm, mov</p>
+                                </div>
+                                <div id="videoUrlPanel" class="video-mode-panel" hidden>
+                                    <input type="url" id="videoUrl" name="videoUrl" placeholder="https://youtube.com/... 또는 영상 직접 링크" maxlength="500" inputmode="url" autocomplete="off">
+                                    <p class="form-hint">https:// 로 시작하는 영상 주소를 입력해 주세요.</p>
                                 </div>
                             </div>
                         </div>
@@ -1451,7 +1460,7 @@
     </button>
 
     <script src="js/elevisorPresence.js?v=20260812-accesslog2"></script>
-    <script src="js/main.js?v=20260817-simple-fields"></script>
+    <script src="js/main.js?v=20260817-video-url2"></script>
     <script src="js/columbarium.js?v=20260815-service-types8"></script>
 </body>
 </html>
