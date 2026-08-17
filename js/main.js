@@ -6,7 +6,7 @@ const navInner = document.querySelector('.nav-inner');
 const navLinks = document.querySelectorAll('.nav-menu a, .nav-brand, .nav-cta, .hero-actions a, .footer a');
 const scrollTopBtn = document.getElementById('scrollToTop');
 const contactForm = document.getElementById('contactForm');
-const phoneInput = document.getElementById('phone');
+const phoneInput = document.getElementById('phone') || document.getElementById('contactPhone');
 const packageButtons = document.querySelectorAll('.package-card');
 const selectedPackage = document.getElementById('selectedPackage');
 const previewTabs = document.querySelectorAll('.preview-tab');
@@ -214,6 +214,123 @@ function startHeroLifeJourney() {
 }
 
 startHeroLifeJourney();
+
+(function setupHeroBgm() {
+    const audio = document.querySelector('[data-hero-bgm]');
+    const toggle = document.querySelector('[data-hero-bgm-toggle]');
+    const label = document.querySelector('[data-hero-bgm-label]');
+    if (!audio || !toggle) return;
+
+    const STORAGE_KEY = 'erusoHeroBgm';
+    const BASE_VOLUME = 0.32;
+    const preferReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let wantOn = localStorage.getItem(STORAGE_KEY) !== 'off';
+    let unlocked = false;
+
+    audio.loop = true;
+    audio.volume = BASE_VOLUME;
+
+    function setUi(playing) {
+        toggle.classList.toggle('is-on', playing);
+        toggle.classList.toggle('is-waiting', wantOn && !playing);
+        toggle.setAttribute('aria-pressed', playing ? 'true' : 'false');
+        toggle.setAttribute('aria-label', playing ? '배경음악 끄기' : '배경음악 켜기');
+        if (label) label.textContent = playing ? '음악 켜짐' : '배경음악';
+        const icon = toggle.querySelector('i');
+        if (icon) icon.className = playing ? 'fas fa-volume-high' : 'fas fa-music';
+    }
+
+    function fadeTo(target, ms) {
+        const from = audio.volume;
+        const steps = Math.max(1, Math.round(ms / 40));
+        let i = 0;
+        const timer = window.setInterval(() => {
+            i += 1;
+            audio.volume = from + (target - from) * (i / steps);
+            if (i >= steps) {
+                window.clearInterval(timer);
+                audio.volume = target;
+            }
+        }, 40);
+    }
+
+    function updateScrollFade() {
+        if (!wantOn || audio.paused) return;
+        const heroEl = document.querySelector('.hero');
+        if (!heroEl) return;
+        const rect = heroEl.getBoundingClientRect();
+        const vis = Math.min(1, Math.max(0, rect.bottom / Math.max(rect.height, 1)));
+        audio.volume = BASE_VOLUME * (0.22 + 0.78 * vis);
+    }
+
+    function playBgm() {
+        if (!wantOn) return Promise.resolve(false);
+        audio.volume = BASE_VOLUME;
+        const p = audio.play();
+        if (p && typeof p.then === 'function') {
+            return p.then(() => {
+                unlocked = true;
+                setUi(true);
+                updateScrollFade();
+                return true;
+            }).catch(() => {
+                setUi(false);
+                return false;
+            });
+        }
+        setUi(!audio.paused);
+        return Promise.resolve(!audio.paused);
+    }
+
+    function stopBgm(persistOff) {
+        try { audio.pause(); } catch (_) { /* ignore */ }
+        if (persistOff) {
+            wantOn = false;
+            localStorage.setItem(STORAGE_KEY, 'off');
+        }
+        setUi(false);
+    }
+
+    toggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        unlocked = true;
+        if (wantOn && !audio.paused) {
+            stopBgm(true);
+            return;
+        }
+        wantOn = true;
+        localStorage.setItem(STORAGE_KEY, 'on');
+        playBgm();
+    });
+
+    const unlock = (e) => {
+        if (!wantOn || unlocked) return;
+        if (e && toggle.contains(e.target)) return;
+        playBgm();
+    };
+    ['pointerdown', 'keydown', 'touchstart'].forEach((ev) => {
+        document.addEventListener(ev, unlock, { passive: true });
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            try { audio.pause(); } catch (_) { /* ignore */ }
+            setUi(false);
+            return;
+        }
+        if (wantOn) playBgm();
+    });
+
+    window.addEventListener('scroll', updateScrollFade, { passive: true });
+
+    setUi(false);
+    if (!preferReduced && wantOn) {
+        window.setTimeout(() => { playBgm(); }, 400);
+    } else {
+        toggle.classList.toggle('is-waiting', wantOn);
+    }
+}());
+
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const contactApiEndpoint = '/api/consultations.php';
 const contactBackupStorageKey = 'erusoMemorialConsultationBackups';
@@ -873,7 +990,31 @@ function initContactForm() {
         return getServiceType() === MEMORIAL_SERVICE;
     }
 
+    function requireApplicantBasics() {
+        const nameEl = form.querySelector('[name="name"]');
+        const phoneEl = form.querySelector('[name="phone"]');
+        const name = (nameEl?.value || '').trim();
+        const phoneDigits = String(phoneEl?.value || '').replace(/\D/g, '');
+        if (name && phoneDigits.length >= 10) return true;
+
+        const msg = !name
+            ? '신청자 성함을 먼저 입력해 주세요.'
+            : '연락처를 먼저 입력해 주세요. (010-0000-0000)';
+        if (notice) {
+            notice.className = 'form-notice error';
+            notice.textContent = msg;
+            notice.style.display = 'block';
+        } else {
+            window.alert(msg);
+        }
+        const target = !name ? nameEl : phoneEl;
+        target?.focus();
+        target?.reportValidity?.();
+        return false;
+    }
+
     function openMemorialPopup() {
+        if (!requireApplicantBasics()) return null;
         const w = 740;
         const h = Math.min(900, Math.max(640, (window.screen?.availHeight || 900) - 80));
         const left = Math.max(0, Math.round(((window.screen?.availWidth || 1200) - w) / 2));
@@ -943,6 +1084,7 @@ function initContactForm() {
         if (!form.checkValidity()) { form.reportValidity(); return; }
 
         const memorial = isMemorialSelected();
+        memorialDraft = window.erusoMemorialDraft || memorialDraft;
         if (memorial && !memorialDraft?.memorialName) {
             if (notice) {
                 notice.className = 'form-notice error';
@@ -972,6 +1114,7 @@ function initContactForm() {
             if (memorialDraft.birthDate) msgParts.push(`생년월일: ${memorialDraft.birthDate}`);
             if (memorialDraft.deathDate) msgParts.push(`기일: ${memorialDraft.deathDate}`);
             if (memorialDraft.relation) msgParts.push(`관계: ${memorialDraft.relation}`);
+            if (memorialDraft.video_url) msgParts.push(`영상 URL: ${memorialDraft.video_url}`);
             if (userMessage) msgParts.push(`추가 문의:\n${userMessage}`);
             memorial_name = deceased;
             description = memorialDraft.description || null;
@@ -1157,7 +1300,12 @@ function initMemorialApplyPopup() {
         }
         let video_url = null;
         if (videoMode === 'url') {
-            const raw = (videoUrlInput?.value || '').trim();
+            let raw = (videoUrlInput?.value || '').trim();
+            if (raw && !/^https?:\/\//i.test(raw)) {
+                if (/^(www\.)?(youtube\.com|m\.youtube\.com|youtu\.be)\//i.test(raw) || /^youtu\.be\//i.test(raw)) {
+                    raw = 'https://' + raw.replace(/^\/\//, '');
+                }
+            }
             if (raw && !/^https?:\/\//i.test(raw)) {
                 if (notice) {
                     notice.className = 'form-notice error';
