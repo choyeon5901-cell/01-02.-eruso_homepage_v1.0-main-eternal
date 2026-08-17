@@ -4023,6 +4023,24 @@ button {
     outline: 2px solid #1c5c4a;
     outline-offset: 2px;
 }
+.service-type-option--featured span {
+    background: var(--teal-deep);
+    border-color: var(--teal-deep);
+    color: #fff;
+    font-weight: 800;
+    box-shadow: 0 8px 18px rgba(14, 74, 71, 0.28);
+}
+.service-type-option--featured:hover span {
+    background: #0a3c3a;
+    border-color: #0a3c3a;
+    color: #fff;
+}
+.service-type-option--featured input:checked + span {
+    background: var(--teal-deep);
+    border-color: var(--teal-deep);
+    color: #fff;
+    box-shadow: 0 8px 18px rgba(14, 74, 71, 0.32), inset 0 0 0 1px rgba(255,255,255,0.18);
+}
 @media (max-width: 560px) {
     .service-type-grid { grid-template-columns: 1fr; }
 }
@@ -4036,12 +4054,101 @@ button {
     letter-spacing: 0.02em;
 }
 .form-char-count { font-size: 11px; color: #94a3b8; text-align: right; margin-top: 4px; }
-.memorial-detail-fields {
+.memorial-detail-entry {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 8px;
 }
-.memorial-detail-fields[hidden] { display: none !important; }
+.memorial-detail-entry[hidden] { display: none !important; }
+.memorial-open-btn {
+    width: 100%;
+    justify-content: center;
+}
+.memorial-detail-summary {
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(28, 92, 74, 0.08);
+    color: #14503f;
+    font-size: 13px;
+    line-height: 1.45;
+}
+.memorial-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 120000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+}
+.memorial-modal[hidden] { display: none !important; }
+.memorial-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(7, 13, 24, 0.62);
+}
+.memorial-modal__dialog {
+    position: relative;
+    z-index: 1;
+    width: min(720px, 100%);
+    max-height: min(88vh, 900px);
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+    overflow: hidden;
+}
+.memorial-modal__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 20px 12px;
+    border-bottom: 1px solid #eef2f7;
+}
+.memorial-modal__head h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 800;
+    color: #1f3556;
+}
+.memorial-modal__head p {
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.45;
+}
+.memorial-modal__close {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: none;
+    color: #94a3b8;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+}
+.memorial-modal__body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px 20px 8px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.memorial-modal__foot {
+    padding: 12px 20px 18px;
+    border-top: 1px solid #eef2f7;
+}
+.memorial-modal__foot .btn {
+    width: 100%;
+    justify-content: center;
+}
+body.memorial-modal-open { overflow: hidden; }
 .media-pick-slot {
     display: flex;
     flex-direction: column;
