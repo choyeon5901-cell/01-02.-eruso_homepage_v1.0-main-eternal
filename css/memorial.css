@@ -4154,13 +4154,24 @@ body.memorial-apply-page {
     min-height: 100vh;
     background: #f4f1ea;
     font-family: 'Noto Sans KR', sans-serif;
+    color: #1a1613;
 }
-.memorial-apply-form {
+body.memorial-apply-page .contact-form,
+body.memorial-apply-page .memorial-apply-form {
+    display: flex !important;
+    flex-direction: column;
+    gap: 16px;
     max-width: 680px;
     margin: 0 auto;
     min-height: 100vh;
     border-radius: 0;
     box-shadow: none;
+    opacity: 1 !important;
+    transform: none !important;
+    background: #fff;
+    color: #1a1613;
+    padding: 24px 20px 32px;
+    box-sizing: border-box;
 }
 .memorial-apply-form h1 {
     margin: 0;
