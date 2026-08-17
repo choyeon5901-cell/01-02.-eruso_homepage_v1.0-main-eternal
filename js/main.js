@@ -853,10 +853,36 @@ function initContactForm() {
     const descCount = document.getElementById('descriptionCount');
     const photoInput = document.getElementById('photoFile');
     const videoInput = document.getElementById('videoFile');
+    const videoUrlInput = document.getElementById('videoUrl');
+    const videoFilePanel = document.getElementById('videoFilePanel');
+    const videoUrlPanel = document.getElementById('videoUrlPanel');
     const photoPreview = document.getElementById('photoPreview');
     const photoPickText = document.getElementById('photoPickText');
     const videoPickText = document.getElementById('videoPickText');
+    let videoMode = 'file';
     if (!form) return;
+
+    function setVideoMode(mode) {
+        videoMode = mode === 'url' ? 'url' : 'file';
+        form.querySelectorAll('[data-video-mode]').forEach((btn) => {
+            const on = btn.getAttribute('data-video-mode') === videoMode;
+            btn.classList.toggle('is-active', on);
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+        if (videoFilePanel) videoFilePanel.hidden = videoMode !== 'file';
+        if (videoUrlPanel) videoUrlPanel.hidden = videoMode !== 'url';
+        if (videoMode === 'url' && videoInput) videoInput.value = '';
+        if (videoMode === 'file' && videoUrlInput) videoUrlInput.value = '';
+        if (videoMode === 'url' && videoPickText) {
+            videoPickText.textContent = '영상 등록';
+            videoPickText.style.color = '';
+        }
+    }
+
+    form.querySelectorAll('[data-video-mode]').forEach((btn) => {
+        btn.addEventListener('click', () => setVideoMode(btn.getAttribute('data-video-mode')));
+    });
+    setVideoMode('file');
 
     function getServiceType() {
         return form.querySelector('input[name="serviceType"]:checked')?.value || '';
@@ -985,8 +1011,22 @@ function initContactForm() {
         let photo_ext = null;
         let video_b64 = null;
         let video_ext = null;
+        let video_url = null;
         const photoFile = memorial ? photoInput?.files?.[0] : null;
-        const videoFile = memorial ? videoInput?.files?.[0] : null;
+        const videoFile = memorial && videoMode === 'file' ? videoInput?.files?.[0] : null;
+        if (memorial && videoMode === 'url') {
+            const raw = (videoUrlInput?.value || '').trim();
+            if (raw) {
+                if (!/^https?:\/\//i.test(raw)) {
+                    notice.className = 'form-notice error';
+                    notice.textContent = '영상 URL은 http:// 또는 https:// 로 시작해야 합니다.';
+                    notice.style.display = 'block';
+                    videoUrlInput?.focus();
+                    return;
+                }
+                video_url = raw.slice(0, 500);
+            }
+        }
         try {
             if (photoFile) {
                 photo_b64 = await toBase64(photoFile);
@@ -1017,13 +1057,14 @@ function initContactForm() {
             photo_ext,
             video_b64,
             video_ext,
+            video_url,
         };
 
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> 접수 중...';
 
         try {
-            const endpoint = (photo_b64 || video_b64)
+            const endpoint = (photo_b64 || video_b64 || video_url)
                 ? `${apiBase}/api/consultations/upload`
                 : `${apiBase}/api/consultations/`;
             const resp = await fetch(endpoint, {
@@ -1043,6 +1084,7 @@ function initContactForm() {
             if (photoPickText) { photoPickText.hidden = false; photoPickText.textContent = '사진 등록'; }
             if (videoPickText) { videoPickText.textContent = '영상 등록'; videoPickText.style.color = ''; }
             if (descCount) descCount.textContent = '0';
+            setVideoMode('file');
             setServiceType(MEMORIAL_SERVICE);
             document.querySelector('.package-card[data-plan="FREE"]')?.click();
             syncMemorialFields();
