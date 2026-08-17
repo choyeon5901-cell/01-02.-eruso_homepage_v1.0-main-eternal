@@ -26,7 +26,7 @@
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/memorial.css?v=20260815-consult-fix">
+    <link rel="stylesheet" href="css/memorial.css?v=20260817-simple-fields">
     <!-- eternal_memory 연동 (로컬 호스트에서는 JS가 localhost로 자동 전환) -->
     <meta name="eruso-api-base" content="https://api.erum2026.co.kr">
     <meta name="eruso-app-base" content="https://erum2026.co.kr">
@@ -1265,51 +1265,143 @@
                         </div>
                     </div>
 
-                    <!-- 오른쪽: 상담 신청 폼 -->
-                    <form class="contact-form" id="contactForm" novalidate>
+                    <!-- 오른쪽: 상담 신청 폼 — 「온라인 추모관 개설」만 상세 필드 -->
+                    <form class="contact-form" id="contactForm" novalidate data-api-v2="1">
                         <input type="hidden" id="selectedPackage" name="selectedPackage" value="FREE">
                         <input type="hidden" id="selectedPlanCode" name="planCode" value="FREE">
 
                         <div class="form-row-2col">
                             <div class="form-row">
-                                <label for="contactName">신청자 성함</label>
+                                <label for="contactName">신청자 성함 <span class="req">*</span></label>
                                 <input type="text" id="contactName" name="name" autocomplete="name" required placeholder="홍길동">
                             </div>
                             <div class="form-row">
-                                <label for="contactPhone">연락처</label>
+                                <label for="contactPhone">연락처 <span class="req">*</span></label>
                                 <input type="tel" id="contactPhone" name="phone" placeholder="010-0000-0000" autocomplete="tel" required>
                             </div>
                         </div>
-                        <div class="form-row-2col">
-                            <div class="form-row">
-                                <label for="contactEmail">이메일</label>
-                                <input type="email" id="contactEmail" name="email" autocomplete="email" placeholder="">
+                        <div class="form-row">
+                            <label for="contactEmail">이메일 <span class="opt">(선택)</span></label>
+                            <input type="email" id="contactEmail" name="email" autocomplete="email" placeholder="example@email.com">
+                        </div>
+
+                        <fieldset class="form-row service-type-fieldset">
+                            <legend>상담 항목 <span class="req">*</span></legend>
+                            <div class="service-type-grid" role="radiogroup" aria-label="상담 항목">
+                                <label class="service-type-option">
+                                    <input type="radio" name="serviceType" value="온라인 추모관 개설" checked>
+                                    <span>온라인 추모관 개설</span>
+                                </label>
+                                <label class="service-type-option">
+                                    <input type="radio" name="serviceType" value="부고 공유 및 장례 일정 안내">
+                                    <span>부고 공유 및 장례 일정 안내</span>
+                                </label>
+                                <label class="service-type-option">
+                                    <input type="radio" name="serviceType" value="봉안당/납골당 분양 상담">
+                                    <span>봉안당/납골당 분양 상담</span>
+                                </label>
+                                <label class="service-type-option">
+                                    <input type="radio" name="serviceType" value="키오스크 도입 문의">
+                                    <span>키오스크 도입 문의</span>
+                                </label>
+                                <label class="service-type-option">
+                                    <input type="radio" name="serviceType" value="온라인 제사 서비스">
+                                    <span>온라인 제사 서비스</span>
+                                </label>
+                                <label class="service-type-option">
+                                    <input type="radio" name="serviceType" value="영상 추모 서비스">
+                                    <span>영상 추모 서비스</span>
+                                </label>
+                                <label class="service-type-option">
+                                    <input type="radio" name="serviceType" value="키오스크 추모 서비스">
+                                    <span>키오스크 추모 서비스</span>
+                                </label>
+                                <label class="service-type-option">
+                                    <input type="radio" name="serviceType" value="기타 문의">
+                                    <span>기타 문의</span>
+                                </label>
+                            </div>
+                            <p class="form-hint" id="memorialTypeHint">온라인 추모관 개설 선택 시 아래 상세 항목이 열립니다.</p>
+                        </fieldset>
+
+                        <!-- 온라인 추모관 개설일 때만 상세 필드 표시 -->
+                        <div id="memorialDetailFields" class="memorial-detail-fields" hidden>
+                            <p class="form-section-title">추모관 정보</p>
+                            <div class="form-row-2col">
+                                <div class="form-row">
+                                    <label for="memorialName">고인 성함 <span class="req">*</span></label>
+                                    <input type="text" id="memorialName" name="memorialName" placeholder="예: 홍길동" maxlength="100">
+                                </div>
+                                <div class="form-row">
+                                    <label for="roomTitle">추모관 이름 <span class="opt">(자동 제안)</span></label>
+                                    <input type="text" id="roomTitle" name="roomTitle" placeholder="예: 故 홍길동 추모관" maxlength="120">
+                                </div>
+                            </div>
+                            <div class="form-row-2col">
+                                <div class="form-row">
+                                    <label for="memorialSubtitle">추모관 부제 <span class="opt">(선택)</span></label>
+                                    <input type="text" id="memorialSubtitle" name="memorialSubtitle" placeholder="예: 영원한 기억 속으로" maxlength="120">
+                                </div>
+                                <div class="form-row">
+                                    <label for="relation">고인과의 관계 <span class="opt">(선택)</span></label>
+                                    <input type="text" id="relation" name="relation" placeholder="부친, 배우자, 자녀 등" maxlength="40">
+                                </div>
+                            </div>
+                            <div class="form-row-2col">
+                                <div class="form-row">
+                                    <label for="birthDate">생년월일 <span class="opt">(선택)</span></label>
+                                    <input type="date" id="birthDate" name="birthDate">
+                                </div>
+                                <div class="form-row">
+                                    <label for="deathDate">기일 <span class="opt">(선택)</span></label>
+                                    <input type="date" id="deathDate" name="deathDate">
+                                </div>
                             </div>
                             <div class="form-row">
-                                <label for="memorialName">고인 성함</label>
-                                <input type="text" id="memorialName" name="memorialName" placeholder="故 성함" maxlength="100">
+                                <label for="description">고인 소개 <span class="opt">(선택, 최대 200자)</span></label>
+                                <textarea id="description" name="description" rows="3" maxlength="200" placeholder="공개 추모관에 표시될 고인 소개를 입력해 주세요."></textarea>
+                                <div class="form-char-count"><span id="descriptionCount">0</span>/200</div>
+                            </div>
+                            <div class="form-row">
+                                <label for="middleDescription">추가 소개 · 금언 <span class="opt">(선택)</span></label>
+                                <textarea id="middleDescription" name="middleDescription" rows="2" placeholder="생애, 특별한 기억, 금언 등"></textarea>
+                            </div>
+                            <div class="form-row-2col media-pick-row">
+                                <div class="form-row">
+                                    <label for="photoFile">영정사진 <span class="opt">(선택)</span></label>
+                                    <input type="file" id="photoFile" name="photoFile" class="visually-hidden" accept="image/*,.heic,.heif">
+                                    <label for="photoFile" class="media-pick-slot" id="photoPickLabel">
+                                        <svg class="media-pick-icon" width="28" height="28" viewBox="0 0 256 256" aria-hidden="true" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <rect x="32" y="48" width="192" height="160" rx="16" stroke="currentColor" stroke-width="12"/>
+                                            <circle cx="92" cy="108" r="20" stroke="currentColor" stroke-width="12"/>
+                                            <path d="M32 168l52-48 36 32 40-48 64 64" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        <span id="photoPickText">사진 등록</span>
+                                        <img id="photoPreview" alt="선택한 영정" hidden>
+                                    </label>
+                                    <p class="form-hint">jpg, png, heic</p>
+                                </div>
+                                <div class="form-row">
+                                    <label for="videoFile">추모 영상 <span class="opt">(선택)</span></label>
+                                    <input type="file" id="videoFile" name="videoFile" class="visually-hidden" accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov">
+                                    <label for="videoFile" class="media-pick-slot" id="videoPickLabel">
+                                        <svg class="media-pick-icon" width="28" height="28" viewBox="0 0 256 256" aria-hidden="true" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <rect x="24" y="56" width="152" height="144" rx="16" stroke="currentColor" stroke-width="12"/>
+                                            <path d="M176 112l56-32v96l-56-32V112z" stroke="currentColor" stroke-width="12" stroke-linejoin="round"/>
+                                        </svg>
+                                        <span id="videoPickText">영상 등록</span>
+                                    </label>
+                                    <p class="form-hint">mp4, webm, mov</p>
+                                </div>
                             </div>
                         </div>
+
                         <div class="form-row">
-                            <label for="serviceType">상담 항목</label>
-                            <select id="serviceType" name="serviceType" required>
-                                <option value="">선택해주세요</option>
-                                <option value="온라인 추모관 개설" selected>온라인 추모관 개설</option>
-                                <option value="부고 공유 및 장례 일정 안내">부고 공유 및 장례 일정 안내</option>
-                                <option value="봉안당/납골당 분양 상담">봉안당/납골당 분양 상담</option>
-                                <option value="키오스크 도입 문의">키오스크 도입 문의</option>
-                                <option value="기타 문의">기타 문의</option>
-                                <option value="온라인 제사 서비스">온라인 제사 서비스</option>
-                                <option value="영상 추모 서비스">영상 추모 서비스</option>
-                                <option value="키오스크 추모 서비스">키오스크 추모 서비스</option>
-                            </select>
-                        </div>
-                        <div class="form-row">
-                            <label for="contactMessage">신청·문의 내용</label>
-                            <textarea id="contactMessage" name="message" rows="5" placeholder="희망 일정, 공개/비공개 여부, 필요한 기능 등을 적어주세요."></textarea>
+                            <label for="contactMessage">신청·문의 내용 <span class="opt">(선택)</span></label>
+                            <textarea id="contactMessage" name="message" rows="4" placeholder="희망 일정, 공개/비공개 여부, 필요한 기능 등을 적어주세요."></textarea>
                         </div>
                         <button type="submit" class="btn btn-primary form-submit" id="contactSubmitBtn">
-                            <i class="fas fa-paper-plane"></i>
+                            <i class="fas fa-paper-plane" aria-hidden="true"></i>
                             이용신청 접수하기
                         </button>
                         <p class="form-notice" id="contactNotice" style="display:none;"></p>
@@ -1359,7 +1451,7 @@
     </button>
 
     <script src="js/elevisorPresence.js?v=20260812-accesslog2"></script>
-    <script src="js/main.js?v=20260812-hero-video"></script>
+    <script src="js/main.js?v=20260817-simple-fields"></script>
     <script src="js/columbarium.js?v=20260815-service-types8"></script>
 </body>
 </html>
