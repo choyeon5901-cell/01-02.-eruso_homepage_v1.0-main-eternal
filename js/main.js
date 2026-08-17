@@ -309,8 +309,8 @@ trackHomepageVisit();
 
 function updateNavState() {
     const scrolled = window.scrollY > 24;
-    navbar.classList.toggle('scrolled', scrolled);
-    scrollTopBtn.classList.toggle('active', window.scrollY > 420);
+    navbar?.classList.toggle('scrolled', scrolled);
+    scrollTopBtn?.classList.toggle('active', window.scrollY > 420);
 
     if (hero && !reducedMotion) {
         const heroShift = Math.min(window.scrollY * 0.08, 34);
@@ -444,7 +444,7 @@ async function submitConsultationToServer(consultation) {
 window.addEventListener('scroll', updateNavState);
 updateNavState();
 
-navToggle.addEventListener('click', () => {
+navToggle?.addEventListener('click', () => {
     const willOpen = !navMenu.classList.contains('active');
     setNavDrawerOpen(willOpen);
 });
@@ -486,7 +486,7 @@ navLinks.forEach((link) => {
     });
 });
 
-scrollTopBtn.addEventListener('click', () => {
+scrollTopBtn?.addEventListener('click', () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
@@ -610,7 +610,9 @@ if (contactForm && contactForm.dataset.apiV2 !== '1') {
     });
 }
 
-const revealTargets = document.querySelectorAll('.about-card, .feature-card, .process-step, .memorial-preview, .contact-form, .section-copy, .section-header, .contact-copy, .support-band, .package-card');
+const revealTargets = document.body?.classList.contains('memorial-apply-page')
+    ? []
+    : document.querySelectorAll('.about-card, .feature-card, .process-step, .memorial-preview, .contact-form, .section-copy, .section-header, .contact-copy, .support-band, .package-card');
 const revealObserver = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
         if (entry.isIntersecting) {
@@ -1036,6 +1038,7 @@ function initContactForm() {
 function initMemorialApplyPopup() {
     const form = document.getElementById('memorialApplyForm');
     if (!form) return;
+    form.classList.add('is-visible');
 
     const memorialNameEl = document.getElementById('memorialName');
     const roomTitleEl = document.getElementById('roomTitle');
@@ -1253,9 +1256,13 @@ function initCyberMemorialApply() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', initContactForm);
-document.addEventListener('DOMContentLoaded', initMemorialApplyPopup);
-document.addEventListener('DOMContentLoaded', initCyberMemorialApply);
+function onReady(fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+}
+onReady(initContactForm);
+onReady(initMemorialApplyPopup);
+onReady(initCyberMemorialApply);
 document.addEventListener('DOMContentLoaded', initReligionGuideTabs);
 document.addEventListener('DOMContentLoaded', initWorkflowGuideLang);
 
