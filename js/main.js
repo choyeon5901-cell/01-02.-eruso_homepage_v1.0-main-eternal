@@ -78,32 +78,72 @@ function activateHeroVideo() {
     clearHeroSlideTimer();
     showHeroCaption(true);
 
+    // 로딩 중에도 포스터/슬라이드가 보이도록 유지 → 첫 페인트 검정 방지
     if (heroSlideshow) {
-        heroSlideshow.classList.add('is-waiting');
-        heroSlideshow.classList.remove('is-active');
+        heroSlideshow.classList.add('is-active');
+        heroSlideshow.classList.remove('is-waiting');
     }
 
     heroVideo.classList.add('is-active');
     try {
-        heroVideo.currentTime = 0;
+        heroVideo.muted = true;
+        heroVideo.playsInline = true;
+        heroVideo.setAttribute('playsinline', '');
+        heroVideo.setAttribute('webkit-playsinline', '');
+        heroVideo.preload = 'auto';
     } catch (_) { /* ignore */ }
 
     const onEnded = () => {
         heroVideo.removeEventListener('ended', onEnded);
-        heroVideo.removeEventListener('error', onEnded);
+        heroVideo.removeEventListener('error', onFail);
         if (!heroLoopActive) return;
         revealHeroSlideshow();
     };
 
+    const onFail = () => {
+        heroVideo.removeEventListener('ended', onEnded);
+        heroVideo.removeEventListener('error', onFail);
+        heroVideo.removeEventListener('canplay', onReady);
+        heroVideo.removeEventListener('playing', onReady);
+        revealHeroSlideshow();
+    };
+
+    const onReady = () => {
+        heroVideo.removeEventListener('canplay', onReady);
+        heroVideo.removeEventListener('playing', onReady);
+        // 실제 프레임이 나온 뒤에만 슬라이드 대기(가림)
+        if (heroSlideshow) {
+            heroSlideshow.classList.add('is-waiting');
+            heroSlideshow.classList.remove('is-active');
+        }
+        showHeroCaption(true);
+    };
+
     heroVideo.addEventListener('ended', onEnded, { once: true });
-    heroVideo.addEventListener('error', onEnded, { once: true });
+    heroVideo.addEventListener('error', onFail, { once: true });
+    heroVideo.addEventListener('canplay', onReady);
+    heroVideo.addEventListener('playing', onReady);
+
+    try {
+        heroVideo.currentTime = 0;
+    } catch (_) { /* ignore */ }
+
+    // 로드 재시도 (캐시/네트워크)
+    try {
+        if (heroVideo.readyState < 2) heroVideo.load();
+    } catch (_) { /* ignore */ }
 
     const playPromise = heroVideo.play();
     if (playPromise && typeof playPromise.then === 'function') {
-        playPromise.catch(() => {
-            // autoplay blocked → stills only, but keep looping stills
-            onEnded();
-        });
+        playPromise
+            .then(() => {
+                if (heroVideo.readyState >= 2) onReady();
+            })
+            .catch(() => {
+                onFail();
+            });
+    } else if (heroVideo.readyState >= 2) {
+        onReady();
     }
 }
 
@@ -499,7 +539,7 @@ previewTabs.forEach((tab) => {
 
 startPreviewRotation();
 
-if (contactForm) {
+if (contactForm && contactForm.dataset.apiV2 !== '1') {
     contactForm.addEventListener('submit', async (event) => {
         event.preventDefault();
 
@@ -772,6 +812,7 @@ function initContactForm() {
         SHARE: '기억의 공유',
         ETERNAL: '기억의 영속',
     };
+    const MEMORIAL_SERVICE = '온라인 추모관 개설';
 
     const host = (location.hostname || '').toLowerCase();
     const isLocal = !host || host === 'localhost' || host === '127.0.0.1' || host.endsWith('.local');
@@ -802,39 +843,190 @@ function initContactForm() {
     const active = document.querySelector('.package-card.active') || document.querySelector('.package-card');
     if (active) syncPlanSelection(active);
 
-    // 폼 제출
     const form    = document.getElementById('contactForm');
     const notice  = document.getElementById('contactNotice');
     const submitBtn = document.getElementById('contactSubmitBtn');
+    const detailEl = document.getElementById('memorialDetailFields');
+    const memorialNameEl = document.getElementById('memorialName');
+    const roomTitleEl = document.getElementById('roomTitle');
+    const descEl = document.getElementById('description');
+    const descCount = document.getElementById('descriptionCount');
+    const photoInput = document.getElementById('photoFile');
+    const videoInput = document.getElementById('videoFile');
+    const photoPreview = document.getElementById('photoPreview');
+    const photoPickText = document.getElementById('photoPickText');
+    const videoPickText = document.getElementById('videoPickText');
     if (!form) return;
+
+    function getServiceType() {
+        return form.querySelector('input[name="serviceType"]:checked')?.value || '';
+    }
+
+    function setServiceType(value) {
+        const radios = Array.from(form.querySelectorAll('input[name="serviceType"]'));
+        const exact = radios.find((r) => r.value === value);
+        const fuzzy = !exact && value
+            ? radios.find((r) => r.value.includes(value) || value.includes(r.value))
+            : null;
+        const target = exact || fuzzy || radios.find((r) => r.value === MEMORIAL_SERVICE);
+        radios.forEach((r) => { r.checked = r === target; });
+        syncMemorialFields();
+    }
+
+    const toBase64 = (file) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+
+    function isMemorialSelected() {
+        return getServiceType() === MEMORIAL_SERVICE;
+    }
+
+    function syncMemorialFields() {
+        const memorial = isMemorialSelected();
+        if (detailEl) detailEl.hidden = !memorial;
+        if (memorialNameEl) memorialNameEl.required = memorial;
+        const hint = document.getElementById('memorialTypeHint');
+        if (hint) hint.hidden = !memorial;
+        const msg = document.getElementById('contactMessage');
+        if (msg) {
+            msg.placeholder = memorial
+                ? '개설 일정, 요금제 등 궁금하신 점'
+                : '궁금하신 사항을 자유롭게 입력해 주세요.';
+        }
+    }
+
+    form.querySelectorAll('input[name="serviceType"]').forEach((radio) => {
+        radio.addEventListener('change', syncMemorialFields);
+    });
+    syncMemorialFields();
+
+    memorialNameEl?.addEventListener('input', () => {
+        if (!roomTitleEl) return;
+        const name = memorialNameEl.value.trim();
+        const auto = name ? `故 ${name} 추모관` : '';
+        const prevAuto = memorialNameEl.dataset.prevAuto || '';
+        if (!roomTitleEl.value.trim() || roomTitleEl.value === prevAuto) {
+            roomTitleEl.value = auto;
+        }
+        memorialNameEl.dataset.prevAuto = auto;
+    });
+
+    descEl?.addEventListener('input', () => {
+        if (descCount) descCount.textContent = String(descEl.value.length);
+    });
+
+    photoInput?.addEventListener('change', () => {
+        const f = photoInput.files?.[0];
+        if (!f || !photoPreview) return;
+        const url = URL.createObjectURL(f);
+        photoPreview.src = url;
+        photoPreview.hidden = false;
+        if (photoPickText) photoPickText.hidden = true;
+    });
+
+    videoInput?.addEventListener('change', () => {
+        const f = videoInput.files?.[0];
+        if (videoPickText) {
+            videoPickText.textContent = f ? f.name : '영상 등록';
+            videoPickText.style.color = f ? '#1d4ed8' : '';
+            videoPickText.style.wordBreak = 'break-all';
+        }
+    });
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!form.checkValidity()) { form.reportValidity(); return; }
+
+        const memorial = isMemorialSelected();
+        if (memorial && !memorialNameEl?.value.trim()) {
+            notice.className = 'form-notice error';
+            notice.textContent = '고인 성함을 입력해 주세요.';
+            notice.style.display = 'block';
+            memorialNameEl?.focus();
+            return;
+        }
 
         const metaApi = document.querySelector('meta[name="eruso-api-base"]')?.content;
         const apiBase = (isLocal ? 'http://localhost:1210' : (metaApi || 'https://api.erum2026.co.kr')).replace(/\/$/, '');
         const planCode = document.getElementById('selectedPlanCode')?.value || 'FREE';
         const planLabel = document.getElementById('selectedPackage')?.value || PLAN_NAMES[planCode] || planCode;
 
+        const userMessage = form.querySelector('[name=message]')?.value.trim() || '';
+        let memorial_name = null;
+        let description = null;
+        let middle_description = null;
+        const msgParts = [];
+
+        if (memorial) {
+            const deceased = memorialNameEl.value.trim();
+            const roomTitle = (roomTitleEl?.value.trim() || (deceased ? `故 ${deceased} 추모관` : '')).trim();
+            if (roomTitle) msgParts.push(`추모관 이름: ${roomTitle}`);
+            const subtitle = form.querySelector('[name=memorialSubtitle]')?.value.trim();
+            if (subtitle) msgParts.push(`추모관 부제: ${subtitle}`);
+            const birth = form.querySelector('[name=birthDate]')?.value.trim();
+            const death = form.querySelector('[name=deathDate]')?.value.trim();
+            if (birth) msgParts.push(`생년월일: ${birth}`);
+            if (death) msgParts.push(`기일: ${death}`);
+            const relation = form.querySelector('[name=relation]')?.value.trim();
+            if (relation) msgParts.push(`관계: ${relation}`);
+            if (userMessage) msgParts.push(`추가 문의:\n${userMessage}`);
+            memorial_name = deceased;
+            description = form.querySelector('[name=description]')?.value.trim() || null;
+            middle_description = form.querySelector('[name=middleDescription]')?.value.trim() || null;
+        } else {
+            if (userMessage) msgParts.push(userMessage);
+        }
+        msgParts.push(`[선택요금제] ${planLabel} (${planCode})`);
+
+        let photo_b64 = null;
+        let photo_ext = null;
+        let video_b64 = null;
+        let video_ext = null;
+        const photoFile = memorial ? photoInput?.files?.[0] : null;
+        const videoFile = memorial ? videoInput?.files?.[0] : null;
+        try {
+            if (photoFile) {
+                photo_b64 = await toBase64(photoFile);
+                photo_ext = photoFile.name.split('.').pop().toLowerCase();
+            }
+            if (videoFile) {
+                video_b64 = await toBase64(videoFile);
+                video_ext = videoFile.name.split('.').pop().toLowerCase();
+            }
+        } catch (err) {
+            notice.className = 'form-notice error';
+            notice.textContent = '파일 읽기에 실패했습니다. 다른 파일로 다시 시도해 주세요.';
+            notice.style.display = 'block';
+            return;
+        }
+
         const payload = {
-            name:         form.querySelector('[name=name]')?.value.trim(),
-            phone:        form.querySelector('[name=phone]')?.value.trim(),
-            email:        form.querySelector('[name=email]')?.value.trim() || null,
-            service_type: form.querySelector('[name=serviceType]')?.value,
+            name: form.querySelector('[name=name]')?.value.trim(),
+            phone: form.querySelector('[name=phone]')?.value.trim(),
+            email: form.querySelector('[name=email]')?.value.trim() || null,
+            service_type: getServiceType(),
             package_type: planLabel,
-            memorial_name: form.querySelector('[name=memorialName]')?.value.trim() || null,
-            message:      [
-                form.querySelector('[name=message]')?.value.trim() || '',
-                `[선택요금제] ${planLabel} (${planCode})`,
-            ].filter(Boolean).join('\n'),
+            memorial_name,
+            description,
+            middle_description,
+            message: msgParts.filter(Boolean).join('\n') || null,
+            photo_b64,
+            photo_ext,
+            video_b64,
+            video_ext,
         };
 
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 접수 중...';
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> 접수 중...';
 
         try {
-            const resp = await fetch(`${apiBase}/api/consultations/`, {
+            const endpoint = (photo_b64 || video_b64)
+                ? `${apiBase}/api/consultations/upload`
+                : `${apiBase}/api/consultations/`;
+            const resp = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
@@ -842,20 +1034,26 @@ function initContactForm() {
             if (!resp.ok) throw new Error(await resp.text());
 
             notice.className = 'form-notice success';
-            notice.textContent = '✅ 이용신청이 접수되었습니다. 관리자 사용승인 후 추모방이 생성됩니다. (1~2 영업일)';
+            notice.textContent = memorial
+                ? '온라인 추모관 개설 신청이 접수되었습니다. 관리자 확인 후 연락드립니다. (1~2 영업일)'
+                : '이용신청이 접수되었습니다. 관리자 확인 후 연락드립니다. (1~2 영업일)';
             notice.style.display = 'block';
             form.reset();
-            const svc = document.getElementById('serviceType');
-            if (svc) svc.value = '온라인 추모관 개설';
+            if (photoPreview) { photoPreview.hidden = true; photoPreview.removeAttribute('src'); }
+            if (photoPickText) { photoPickText.hidden = false; photoPickText.textContent = '사진 등록'; }
+            if (videoPickText) { videoPickText.textContent = '영상 등록'; videoPickText.style.color = ''; }
+            if (descCount) descCount.textContent = '0';
+            setServiceType(MEMORIAL_SERVICE);
             document.querySelector('.package-card[data-plan="FREE"]')?.click();
+            syncMemorialFields();
         } catch (err) {
             notice.className = 'form-notice error';
-            notice.textContent = '⚠️ 신청 중 오류가 발생했습니다. 전화로 문의해 주세요.';
+            notice.textContent = '신청 중 오류가 발생했습니다. 전화로 문의해 주세요.';
             notice.style.display = 'block';
             console.error('[contact form]', err);
         } finally {
             submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> 이용신청 접수하기';
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane" aria-hidden="true"></i> 이용신청 접수하기';
         }
     });
 }
@@ -879,11 +1077,17 @@ function initCyberMemorialApply() {
     const applyBtn = document.getElementById('cyberApplyBtn');
     applyBtn?.addEventListener('click', () => {
         const service = applyBtn.getAttribute('data-service') || '온라인 추모관 개설';
-        const svc = document.getElementById('serviceType');
-        if (svc) {
-            const opt = Array.from(svc.options).find((o) => o.value === service || o.textContent.includes(service));
-            if (opt) svc.value = opt.value;
-            else svc.value = service;
+        const form = document.getElementById('contactForm');
+        if (!form) return;
+        const radios = Array.from(form.querySelectorAll('input[name="serviceType"]'));
+        const exact = radios.find((r) => r.value === service);
+        const fuzzy = !exact
+            ? radios.find((r) => r.value.includes(service) || service.includes(r.value))
+            : null;
+        const target = exact || fuzzy;
+        if (target) {
+            radios.forEach((r) => { r.checked = r === target; });
+            target.dispatchEvent(new Event('change', { bubbles: true }));
         }
     });
 }
@@ -1057,3 +1261,60 @@ function initReligionGuideTabs() {
 
     setParent(activeParent);
 }
+
+/* ── Elevisor 홈페이지 접속로그 presence (CDN 미배포 대비 main.js 내장) ── */
+(function () {
+  if (window.__erusoStartElevisorPresence) {
+    try { window.__erusoStartElevisorPresence(); } catch (e) {}
+    return;
+  }
+  var GUEST_KEY = "elevisor_guest_id";
+  var INTERVAL_MS = 30000;
+  function rid() {
+    try { if (crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
+    return "g-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
+  }
+  function gid() {
+    try {
+      var id = localStorage.getItem(GUEST_KEY);
+      if (!id) { id = rid(); localStorage.setItem(GUEST_KEY, id); }
+      return id;
+    } catch (e) { return rid(); }
+  }
+  function purl() {
+    try {
+      var path = (location.pathname || "/") + (location.search || "") + (location.hash || "");
+      var host = location.host || "";
+      return String(host ? location.protocol + "//" + host + path : "https://eruso.co.kr" + path).slice(0, 200);
+    } catch (e) { return "https://eruso.co.kr/"; }
+  }
+  function pingBase() {
+    try {
+      var m = document.querySelector('meta[name="eruso-elevisor-ping"]');
+      if (m && m.content) return String(m.content).replace(/\/$/, "");
+    } catch (e) {}
+    var h = (location.hostname || "").toLowerCase();
+    if (!h || h === "localhost" || h === "127.0.0.1" || h.endsWith(".local")) {
+      return "http://localhost:1200/__elevisor/ping";
+    }
+    return "https://erum2026.co.kr/__elevisor/ping";
+  }
+  function ping() {
+    var id = "guest:" + gid();
+    var url = purl();
+    var endpoint =
+      pingBase() +
+      "?clientId=" + encodeURIComponent(id) +
+      "&kind=guest&url=" + encodeURIComponent(url) +
+      "&_t=" + Date.now();
+    try { var img = new Image(); img.src = endpoint; } catch (e) {}
+    try { fetch(endpoint, { method: "GET", cache: "no-store", mode: "no-cors", keepalive: true }).catch(function () {}); } catch (e) {}
+  }
+  ping();
+  setInterval(ping, INTERVAL_MS);
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") ping();
+  });
+  window.addEventListener("focus", ping);
+  window.addEventListener("hashchange", ping);
+})();
