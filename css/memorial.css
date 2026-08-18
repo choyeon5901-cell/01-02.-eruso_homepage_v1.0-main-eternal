@@ -2656,6 +2656,10 @@ button {
         display: none !important;
     }
 
+    .nav-board {
+        display: inline-flex !important;
+    }
+
     /* 로고 | 서비스명(중앙) | 햄버거 — 3열 그리드로 정렬 고정 */
     .nav-inner {
         display: grid;
@@ -3314,6 +3318,30 @@ button {
     box-shadow: 0 10px 22px rgba(23, 33, 31, 0.06);
 }
 .nav-quick i { color: var(--amber); }
+
+.nav-board {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 14px;
+    min-height: 44px;
+    border-radius: 999px;
+    border: 1px solid rgba(199, 166, 91, 0.5);
+    background: rgba(255, 255, 255, 0.92);
+    font-weight: 800;
+    font-size: 14px;
+    color: var(--teal-deep);
+    white-space: nowrap;
+    flex-shrink: 0;
+    text-decoration: none;
+    box-shadow: 0 10px 22px rgba(23, 33, 31, 0.06);
+}
+.nav-board i { color: #C7A65B; }
+.nav-board:hover {
+    border-color: #C7A65B;
+    background: rgba(199, 166, 91, 0.16);
+}
 
 @media (max-width: 980px) {
     .nav-quick {
