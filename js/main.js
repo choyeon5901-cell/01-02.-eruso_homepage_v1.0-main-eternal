@@ -1377,6 +1377,15 @@ function initCyberMemorialApply() {
         if (el) el.href = jesaTrialHref;
     });
 
+    const communityHref = `${appBase}/community`;
+    const communityWriteHref = `${appBase}/community/write`;
+    ['navCommunityLink', 'footerCommunityLink'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.href = communityHref;
+    });
+    const pilotCommunity = document.getElementById('pilot-notice-community');
+    if (pilotCommunity) pilotCommunity.href = communityWriteHref;
+
     const applyBtn = document.getElementById('cyberApplyBtn');
     applyBtn?.addEventListener('click', () => {
         const service = applyBtn.getAttribute('data-service') || '온라인 추모관 개설';
