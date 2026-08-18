@@ -117,6 +117,7 @@ function activateHeroVideo() {
             heroSlideshow.classList.remove('is-active');
         }
         showHeroCaption(true);
+        window.dispatchEvent(new Event('eruso-hero-video-start'));
     };
 
     heroVideo.addEventListener('ended', onEnded, { once: true });
@@ -222,36 +223,26 @@ startHeroLifeJourney();
     if (!audio || !toggle) return;
 
     const STORAGE_KEY = 'erusoHeroBgm';
-    const BASE_VOLUME = 0.32;
-    const preferReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let wantOn = localStorage.getItem(STORAGE_KEY) !== 'off';
-    let unlocked = false;
+    const SRC = 'images/hero-remember.mp3?v=20260817-piano';
+    const BASE_VOLUME = 0.42;
+    let wantOn = true;
+    try { wantOn = localStorage.getItem(STORAGE_KEY) !== 'off'; } catch (_) { /* ignore */ }
+    let starting = false;
 
     audio.loop = true;
+    audio.preload = 'auto';
     audio.volume = BASE_VOLUME;
+    audio.src = SRC;
+    try { audio.load(); } catch (_) { /* ignore */ }
 
-    function setUi(playing) {
+    function setUi(playing, errorText) {
         toggle.classList.toggle('is-on', playing);
-        toggle.classList.toggle('is-waiting', wantOn && !playing);
+        toggle.classList.toggle('is-waiting', wantOn && !playing && !errorText);
         toggle.setAttribute('aria-pressed', playing ? 'true' : 'false');
         toggle.setAttribute('aria-label', playing ? '배경음악 끄기' : '배경음악 켜기');
-        if (label) label.textContent = playing ? '음악 켜짐' : '배경음악';
+        if (label) label.textContent = errorText || (playing ? '음악 켜짐' : '음악 켜기');
         const icon = toggle.querySelector('i');
         if (icon) icon.className = playing ? 'fas fa-volume-high' : 'fas fa-music';
-    }
-
-    function fadeTo(target, ms) {
-        const from = audio.volume;
-        const steps = Math.max(1, Math.round(ms / 40));
-        let i = 0;
-        const timer = window.setInterval(() => {
-            i += 1;
-            audio.volume = from + (target - from) * (i / steps);
-            if (i >= steps) {
-                window.clearInterval(timer);
-                audio.volume = target;
-            }
-        }, 40);
     }
 
     function updateScrollFade() {
@@ -260,75 +251,75 @@ startHeroLifeJourney();
         if (!heroEl) return;
         const rect = heroEl.getBoundingClientRect();
         const vis = Math.min(1, Math.max(0, rect.bottom / Math.max(rect.height, 1)));
-        audio.volume = BASE_VOLUME * (0.22 + 0.78 * vis);
+        audio.volume = BASE_VOLUME * (0.35 + 0.65 * vis);
     }
 
     function playBgm() {
-        if (!wantOn) return Promise.resolve(false);
+        if (!wantOn || starting) return Promise.resolve(false);
+        starting = true;
         audio.volume = BASE_VOLUME;
         const p = audio.play();
-        if (p && typeof p.then === 'function') {
-            return p.then(() => {
-                unlocked = true;
+        const done = (ok, err) => {
+            starting = false;
+            if (ok) {
                 setUi(true);
                 updateScrollFade();
                 return true;
-            }).catch(() => {
-                setUi(false);
-                return false;
-            });
+            }
+            const missing = err && /notsupported|network|abort|decode/i.test(String(err.name || err.message || ''));
+            setUi(false, missing ? '음원을 불러오지 못했습니다' : null);
+            return false;
+        };
+        if (p && typeof p.then === 'function') {
+            return p.then(() => done(true)).catch((err) => done(false, err));
         }
-        setUi(!audio.paused);
-        return Promise.resolve(!audio.paused);
+        return Promise.resolve(done(!audio.paused));
     }
 
     function stopBgm(persistOff) {
+        starting = false;
         try { audio.pause(); } catch (_) { /* ignore */ }
         if (persistOff) {
             wantOn = false;
-            localStorage.setItem(STORAGE_KEY, 'off');
+            try { localStorage.setItem(STORAGE_KEY, 'off'); } catch (_) { /* ignore */ }
         }
         setUi(false);
     }
 
     toggle.addEventListener('click', (e) => {
+        e.preventDefault();
         e.stopPropagation();
-        unlocked = true;
         if (wantOn && !audio.paused) {
             stopBgm(true);
             return;
         }
         wantOn = true;
-        localStorage.setItem(STORAGE_KEY, 'on');
+        try { localStorage.setItem(STORAGE_KEY, 'on'); } catch (_) { /* ignore */ }
         playBgm();
     });
 
-    const unlock = (e) => {
-        if (!wantOn || unlocked) return;
-        if (e && toggle.contains(e.target)) return;
+    const unlock = () => {
+        if (!wantOn || !audio.paused) return;
         playBgm();
     };
-    ['pointerdown', 'keydown', 'touchstart'].forEach((ev) => {
+    ['pointerdown', 'click', 'keydown', 'touchstart'].forEach((ev) => {
         document.addEventListener(ev, unlock, { passive: true });
     });
+
+    audio.addEventListener('playing', () => setUi(true));
+    audio.addEventListener('error', () => setUi(false, '음원을 불러오지 못했습니다'));
 
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
             try { audio.pause(); } catch (_) { /* ignore */ }
-            setUi(false);
             return;
         }
         if (wantOn) playBgm();
     });
 
     window.addEventListener('scroll', updateScrollFade, { passive: true });
-
     setUi(false);
-    if (!preferReduced && wantOn) {
-        window.setTimeout(() => { playBgm(); }, 400);
-    } else {
-        toggle.classList.toggle('is-waiting', wantOn);
-    }
+    playBgm();
 }());
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
