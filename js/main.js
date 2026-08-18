@@ -1379,7 +1379,7 @@ function initCyberMemorialApply() {
 
     const communityHref = `${appBase}/community`;
     const communityWriteHref = `${appBase}/community/write`;
-    ['navCommunityLink', 'footerCommunityLink'].forEach((id) => {
+    ['navCommunityLink', 'navCommunityCta', 'footerCommunityLink'].forEach((id) => {
         const el = document.getElementById(id);
         if (el) el.href = communityHref;
     });
