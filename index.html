@@ -26,7 +26,7 @@
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/memorial.css?v=20260817-hero-bgm2">
+    <link rel="stylesheet" href="css/memorial.css?v=20260818-board-popup">
     <!-- eternal_memory 연동 (로컬 호스트에서는 JS가 localhost로 자동 전환) -->
     <meta name="eruso-api-base" content="https://api.erum2026.co.kr">
     <meta name="eruso-app-base" content="https://erum2026.co.kr">
@@ -57,7 +57,7 @@
 좋은 의견 주시면
 오픈 전까지 최대한 반영하겠습니다.</p>
         <div style="margin-top:22px;display:flex;flex-direction:column;align-items:center;gap:10px;">
-          <a id="pilot-notice-community" href="https://erum2026.co.kr/community?write=1" style="
+          <a id="pilot-notice-community" class="js-community-board" data-community-view="write" href="https://erum2026.co.kr/community/write" style="
             width:100%;max-width:240px;border:none;border-radius:12px;box-sizing:border-box;
             background:#C7A65B;color:#0a1628;font-size:15px;font-weight:700;letter-spacing:0.02em;
             line-height:1.2;padding:14px 20px;cursor:pointer;text-align:center;text-decoration:none;display:block;
@@ -108,6 +108,7 @@
                 <li><a href="#process"><i class="fas fa-user-plus" aria-hidden="true"></i><span>회원가입방법</span></a></li>
                 <li><a href="#cyber-apply"><i class="fas fa-list-ol" aria-hidden="true"></i><span>이용안내</span></a></li>
                 <li><a href="#cyber-apply"><i class="fas fa-envelope" aria-hidden="true"></i><span>문의</span></a></li>
+                <li><a id="navCommunityLink" class="js-community-board" data-community-view="list" href="https://erum2026.co.kr/community"><i class="fas fa-comments" aria-hidden="true"></i><span>게시판</span></a></li>
             </ul>
             <div class="nav-right">
                 <a href="#memorial" class="nav-quick" data-nav-quick="memorial">
@@ -1379,6 +1380,7 @@
                 <a href="#cyber-apply">이용안내</a>
                 <a href="#procedure">이용 절차</a>
                 <a href="#cyber-apply">문의</a>
+                <a id="footerCommunityLink" class="js-community-board" data-community-view="list" href="https://erum2026.co.kr/community">게시판</a>
             </div>
             <div>
                 <h3>고객지원</h3>
@@ -1404,7 +1406,8 @@
     </button>
 
     <script src="js/elevisorPresence.js?v=20260812-accesslog2"></script>
-    <script src="js/main.js?v=20260817-piano"></script>
+    <script src="js/main.js?v=20260818-board-popup"></script>
+    <script src="js/community-board.js?v=20260818-board-popup"></script>
     <script src="js/columbarium.js?v=20260815-service-types8"></script>
 </body>
 </html>
