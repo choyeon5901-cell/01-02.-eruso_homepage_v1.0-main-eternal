@@ -2621,11 +2621,11 @@ button {
 /* 넓은 데스크톱: 메뉴 간격 유지 (너무 조이지 않음) */
 @media (max-width: 1560px) and (min-width: 1401px) {
     .nav-menu a {
-        font-size: 14px;
+        font-size: 13px;
     }
 
     .nav-menu li + li::before {
-        margin: 0 16px;
+        margin: 0 12px;
     }
 
     .brand-service {
@@ -2642,11 +2642,11 @@ button {
     }
 
     .nav-menu a {
-        font-size: 13px;
+        font-size: 12px;
     }
 
     .nav-menu li + li::before {
-        margin: 0 12px;
+        margin: 0 8px;
     }
 }
 
@@ -5038,5 +5038,299 @@ h1, h2, h3, h4, p, li, label, .btn, .nav-menu a {
     .workflow-guide-actions .btn {
         width: 100%;
         justify-content: center;
+    }
+}
+
+/* 홈페이지 의견게시판 팝업 */
+.eruso-board-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 12px;
+    box-sizing: border-box;
+    background: rgba(7, 13, 24, 0.72);
+}
+.eruso-board-overlay[hidden] {
+    display: none !important;
+}
+.eruso-board-dialog {
+    width: min(920px, 100%);
+    max-height: min(88vh, 860px);
+    display: flex;
+    flex-direction: column;
+    background: #FAF8F5;
+    border: 1px solid rgba(199, 166, 91, 0.35);
+    border-radius: 16px;
+    box-shadow: 0 20px 48px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+    font-family: "Noto Sans KR", sans-serif;
+}
+.eruso-board-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 20px 22px 14px;
+    border-bottom: 1px solid rgba(31, 53, 86, 0.1);
+}
+.eruso-board-kicker {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: #C7A65B;
+}
+.eruso-board-head h2 {
+    margin: 6px 0 0;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    color: #1F3556;
+}
+.eruso-board-head-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.eruso-board-close {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: transparent;
+    color: #1F3556;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+}
+.eruso-board-write-btn,
+.eruso-board-cancel {
+    min-height: 40px;
+    padding: 0 14px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.eruso-board-write-btn {
+    border: none;
+    background: #C7A65B;
+    color: #0a1628;
+}
+.eruso-board-cancel {
+    border: 1.5px solid rgba(31, 53, 86, 0.25);
+    background: transparent;
+    color: #1F3556;
+}
+.eruso-board-body {
+    padding: 16px 22px 22px;
+    overflow: auto;
+    min-height: 0;
+}
+.eruso-board-sub {
+    margin: 0 0 12px;
+    color: #4B5563;
+    font-size: 15px;
+    line-height: 1.6;
+}
+.eruso-board-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.eruso-board-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.eruso-board-chip {
+    min-height: 34px;
+    padding: 0 10px;
+    border: 1px solid rgba(31, 53, 86, 0.16);
+    border-radius: 999px;
+    background: #fff;
+    color: #1F3556;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.eruso-board-chip.is-on {
+    background: rgba(199, 166, 91, 0.18);
+    border-color: #C7A65B;
+}
+.eruso-board-count {
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: #6B7280;
+}
+.eruso-board-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    background: #fff;
+}
+.eruso-board-table th,
+.eruso-board-table td {
+    padding: 10px 8px;
+    border-bottom: 1px solid #E5E7EB;
+    font-size: 14px;
+    line-height: 1.5;
+    word-break: keep-all;
+}
+.eruso-board-table th {
+    text-align: center;
+    background: #F3F0EA;
+    color: #1F3556;
+    font-size: 13px;
+}
+.eruso-board-table td.is-center,
+.eruso-board-empty {
+    text-align: center;
+}
+.eruso-board-table td.is-title {
+    text-align: left;
+}
+.eruso-board-row {
+    cursor: pointer;
+}
+.eruso-board-row:hover {
+    background: #EEF2F7;
+}
+.eruso-board-empty {
+    color: #6B7280;
+    padding: 28px 8px;
+}
+.eruso-board-mobile {
+    display: none;
+}
+.eruso-board-pager {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 14px;
+}
+.eruso-board-pager button {
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0 10px;
+    border: 1px solid rgba(31, 53, 86, 0.16);
+    border-radius: 8px;
+    background: #fff;
+    color: #1F3556;
+    font-weight: 700;
+    cursor: pointer;
+}
+.eruso-board-pager button.is-on {
+    background: #1F3556;
+    color: #fff;
+    border-color: #1F3556;
+}
+.eruso-board-pager button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+.eruso-board-ellipsis {
+    color: #9CA3AF;
+    padding: 0 4px;
+}
+.eruso-board-back {
+    border: none;
+    background: none;
+    color: #2D5390;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0 0 10px;
+}
+.eruso-board-detail-title {
+    margin: 0 0 8px;
+    font-size: 20px;
+    color: #1F3556;
+}
+.eruso-board-detail-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    color: #6B7280;
+    font-size: 13px;
+    margin-bottom: 14px;
+}
+.eruso-board-detail-body {
+    white-space: pre-wrap;
+    line-height: 1.7;
+    color: #1F2937;
+    font-size: 15px;
+}
+.eruso-board-detail-note {
+    margin-top: 16px;
+    padding: 12px;
+    border-radius: 10px;
+    background: rgba(199, 166, 91, 0.12);
+    color: #1F3556;
+    line-height: 1.6;
+}
+.eruso-board-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.eruso-board-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-weight: 700;
+    color: #1F3556;
+    font-size: 15px;
+}
+.eruso-board-form input,
+.eruso-board-form select,
+.eruso-board-form textarea {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 42px;
+    padding: 8px 10px;
+    border: 1px solid rgba(31, 53, 86, 0.2);
+    border-radius: 8px;
+    font: inherit;
+    font-weight: 400;
+}
+.eruso-board-form textarea {
+    min-height: 140px;
+    resize: vertical;
+}
+.eruso-board-req { color: #C25450; }
+.eruso-board-opt { color: #6B7280; font-size: 13px; font-weight: 600; }
+.eruso-board-error { color: #C25450; margin: 0; font-weight: 700; }
+.eruso-board-ok { color: #1F6B4A; font-weight: 700; }
+.eruso-board-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+@media (max-width: 720px) {
+    .eruso-board-table-wrap { display: none; }
+    .eruso-board-mobile { display: flex; flex-direction: column; gap: 8px; }
+    .eruso-board-card {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        text-align: left;
+        padding: 12px;
+        border: 1px solid rgba(31, 53, 86, 0.12);
+        border-radius: 10px;
+        background: #fff;
+        cursor: pointer;
+        color: #1F3556;
+    }
+    .eruso-board-card-meta,
+    .eruso-board-card span {
+        color: #6B7280;
+        font-size: 13px;
     }
 }
