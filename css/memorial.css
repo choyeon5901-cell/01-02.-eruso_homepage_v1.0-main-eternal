@@ -2407,8 +2407,9 @@ button {
 
 .footer-grid {
     display: grid;
-    grid-template-columns: 1.5fr 0.6fr 0.6fr;
-    gap: 40px;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.7fr) minmax(0, 0.55fr) minmax(0, 0.9fr);
+    gap: 32px 28px;
+    align-items: start;
 }
 
 .footer-brand {
@@ -2725,6 +2726,11 @@ button {
     .contact-layout,
     .support-band {
         grid-template-columns: 1fr;
+    }
+
+    .footer-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 28px 24px;
     }
 
     .hero-panel {
