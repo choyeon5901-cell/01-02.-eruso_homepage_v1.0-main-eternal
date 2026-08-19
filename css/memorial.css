@@ -5081,6 +5081,54 @@ h1, h2, h3, h4, p, li, label, .btn, .nav-menu a {
     font-weight: 700;
     color: #6B7280;
 }
+.eruso-board-search {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0 0 12px;
+    padding: 12px;
+    border-radius: 10px;
+    background: #1f3556;
+    color: #fff;
+}
+.eruso-board-search-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-end;
+}
+.eruso-board-search label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    min-width: 0;
+}
+.eruso-board-search input,
+.eruso-board-search select {
+    min-height: 32px;
+    min-width: 138px;
+    padding: 0 8px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    color: #1F3556;
+}
+.eruso-board-search-go,
+.eruso-board-search-reset {
+    min-height: 32px;
+    padding: 0 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.eruso-board-search-go { background: #6b7280; color: #fff; }
+.eruso-board-search-reset { background: #fff; color: #1f3556; }
+.eruso-board-search .eruso-board-count { color: #E5E7EB; margin-left: auto; align-self: center; }
 .eruso-board-table {
     width: 100%;
     border-collapse: collapse;
