@@ -1,9 +1,9 @@
 /**
  * 홈페이지 의견게시판 — 페이지 이동 없이 팝업.
- * 목록은 서버 페이징(15건)만 요청한다.
+ * 목록은 서버 페이징(12건)만 요청한다.
  */
 (function initCommunityBoardPopup() {
-    const PAGE_SIZE = 15;
+    const PAGE_SIZE = 12;
     const CATEGORIES = [
         { value: "feature_request", label: "기능 제안" },
         { value: "bug_report", label: "오류 신고" },
@@ -31,6 +31,11 @@
     let page = 1;
     let total = 0;
     let category = "all";
+    let titleQ = "";
+    let authorQ = "";
+    let statusFilter = "all";
+    let dateFrom = "";
+    let dateTo = "";
     let view = "list";
     let detailItem = null;
     let abortCtl = null;
@@ -50,10 +55,14 @@
         return CATEGORIES.find((c) => c.value === value)?.label || value || "-";
     }
 
-    function displayAuthor(name) {
-        const text = String(name || "").trim();
-        if (!text || text.startsWith("aes256gcm:")) return "익명";
-        return text;
+    function displayAuthor(item) {
+        if (item && item.author_label) return item.author_label;
+        if (item && item.is_member) {
+            const text = String(item.author_name || "").trim();
+            if (!text || text.startsWith("aes256gcm:")) return "(회)";
+            return text + "(회)";
+        }
+        return "익명";
     }
 
     function fmtDate(iso, withTime) {
@@ -164,13 +173,6 @@
                 }
                 return;
             }
-            const catBtn = e.target.closest("[data-board-cat]");
-            if (catBtn) {
-                category = catBtn.getAttribute("data-board-cat") || "all";
-                page = 1;
-                loadList();
-                return;
-            }
             const row = e.target.closest("[data-board-id]");
             if (row) {
                 openDetail(Number(row.getAttribute("data-board-id")));
@@ -233,10 +235,12 @@
 
     function renderList(items, loading, error) {
         const body = overlay.querySelector("[data-board-body]");
-        const cats = [{ value: "all", label: "전체" }].concat(CATEGORIES);
-        const catHtml = cats.map((c) => (
-            `<button type="button" class="eruso-board-chip${category === c.value ? " is-on" : ""}" data-board-cat="${esc(c.value)}">${esc(c.label)}</button>`
-        )).join("");
+        const catOpts = [{ value: "all", label: "전체" }].concat(CATEGORIES)
+            .map((c) => `<option value="${esc(c.value)}"${category === c.value ? " selected" : ""}>${esc(c.label)}</option>`)
+            .join("");
+        const statusOpts = [{ value: "all", label: "전체" }].concat(
+            Object.keys(STATUS_LABEL).map((k) => ({ value: k, label: STATUS_LABEL[k] }))
+        ).map((s) => `<option value="${esc(s.value)}"${statusFilter === s.value ? " selected" : ""}>${esc(s.label)}</option>`).join("");
 
         let rows = "";
         if (loading) {
@@ -248,11 +252,12 @@
         } else {
             rows = items.map((item, idx) => {
                 const no = total - ((page - 1) * PAGE_SIZE + idx);
+                const lock = item.has_password ? "🔒 " : "";
                 return `<tr class="eruso-board-row" data-board-id="${item.id}" tabindex="0">
                     <td class="is-center">${no}</td>
                     <td class="is-center">${esc(catLabel(item.category))}</td>
-                    <td class="is-title">${esc(item.title)}</td>
-                    <td class="is-center">${esc(displayAuthor(item.author_name))}</td>
+                    <td class="is-title">${lock}${esc(item.title)}</td>
+                    <td class="is-center">${esc(displayAuthor(item))}</td>
                     <td class="is-center">${esc(fmtDate(item.created_at))}</td>
                     <td class="is-center">${esc(statusText(item))}</td>
                 </tr>`;
@@ -262,20 +267,32 @@
         const cards = (!loading && !error && items.length)
             ? items.map((item, idx) => {
                 const no = total - ((page - 1) * PAGE_SIZE + idx);
+                const lock = item.has_password ? "🔒 " : "";
                 return `<button type="button" class="eruso-board-card" data-board-id="${item.id}">
                     <span class="eruso-board-card-meta">${esc(catLabel(item.category))} · ${esc(fmtDate(item.created_at))}</span>
-                    <strong>${no}. ${esc(item.title)}</strong>
-                    <span>${esc(displayAuthor(item.author_name))} · ${esc(statusText(item))}</span>
+                    <strong>${no}. ${lock}${esc(item.title)}</strong>
+                    <span>${esc(displayAuthor(item))} · ${esc(statusText(item))}</span>
                 </button>`;
             }).join("")
             : "";
 
         body.innerHTML = `
             <p class="eruso-board-sub">등록하면 바로 게시판에 표시되고, 담당자가 검토합니다.</p>
-            <div class="eruso-board-toolbar">
-                <div class="eruso-board-chips">${catHtml}</div>
-                <span class="eruso-board-count">총 ${total.toLocaleString("ko-KR")}건</span>
-            </div>
+            <form class="eruso-board-search" data-board-search>
+                <div class="eruso-board-search-row">
+                    <label>분류 <select name="category">${catOpts}</select></label>
+                    <label>상태 <select name="status">${statusOpts}</select></label>
+                    <label>시작일 <input type="date" name="date_from" value="${esc(dateFrom)}"></label>
+                    <label>종료일 <input type="date" name="date_to" value="${esc(dateTo)}"></label>
+                    <button type="submit" class="eruso-board-search-go">조회</button>
+                    <button type="button" class="eruso-board-search-reset" data-board-reset>초기화</button>
+                </div>
+                <div class="eruso-board-search-row">
+                    <label>제목 <input name="title" value="${esc(titleQ)}" placeholder="제목 검색"></label>
+                    <label>작성자 <input name="author" value="${esc(authorQ)}" placeholder="이름·아이디"></label>
+                    <span class="eruso-board-count">총 ${total.toLocaleString("ko-KR")}건</span>
+                </div>
+            </form>
             <div class="eruso-board-table-wrap">
                 <table class="eruso-board-table">
                     <thead>
@@ -289,6 +306,26 @@
             <div class="eruso-board-mobile">${loading || error ? "" : (cards || '<p class="eruso-board-empty">아직 등록된 글이 없습니다.</p>')}</div>
             ${renderPager()}
         `;
+        const form = body.querySelector("[data-board-search]");
+        form?.addEventListener("submit", (e) => {
+            e.preventDefault();
+            category = form.category.value || "all";
+            statusFilter = form.status.value || "all";
+            titleQ = (form.title.value || "").trim();
+            authorQ = (form.author.value || "").trim();
+            dateFrom = form.date_from.value || "";
+            dateTo = form.date_to.value || "";
+            page = 1;
+            loadList();
+        });
+        body.querySelector("[data-board-reset]")?.addEventListener("click", () => {
+            category = "all";
+            statusFilter = "all";
+            titleQ = "";
+            authorQ = "";
+            dateFrom = "";
+            dateTo = "";
+        });
     }
 
     async function loadList() {
@@ -301,6 +338,11 @@
                 limit: String(PAGE_SIZE),
             });
             if (category && category !== "all") params.set("category", category);
+            if (statusFilter && statusFilter !== "all") params.set("status", statusFilter);
+            if (titleQ) params.set("title", titleQ);
+            if (authorQ) params.set("author", authorQ);
+            if (dateFrom) params.set("date_from", dateFrom);
+            if (dateTo) params.set("date_to", dateTo);
             const data = parseList(await api("/api/community/feedback?" + params.toString()));
             total = data.total;
             const last = Math.max(1, Math.ceil(total / PAGE_SIZE) || 1);
@@ -327,27 +369,62 @@
             return;
         }
         const extra = [];
-        if (item.ai_summary) extra.push(`<p><strong>요약</strong> ${esc(item.ai_summary)}</p>`);
-        if (item.status === "approved" && item.expected_at) {
-            extra.push(`<p><strong>적용예상시간</strong> ${esc(fmtExpected(item.expected_at))}</p>`);
+        if (!item.content_locked) {
+            if (item.ai_summary) extra.push(`<p><strong>요약</strong> ${esc(item.ai_summary)}</p>`);
+            if (item.status === "approved" && item.expected_at) {
+                extra.push(`<p><strong>적용예상시간</strong> ${esc(fmtExpected(item.expected_at))}</p>`);
+            }
+            if (item.status === "rejected" && item.reviewer_note && !String(item.reviewer_note).startsWith("[AI 자동처리]")) {
+                extra.push(`<p><strong>반려사유</strong> ${esc(item.reviewer_note)}</p>`);
+            }
+            if (item.applied_note) extra.push(`<p><strong>운영 메모</strong> ${esc(item.applied_note)}</p>`);
         }
-        if (item.status === "rejected" && item.reviewer_note && !String(item.reviewer_note).startsWith("[AI 자동처리]")) {
-            extra.push(`<p><strong>반려사유</strong> ${esc(item.reviewer_note)}</p>`);
-        }
-        if (item.applied_note) extra.push(`<p><strong>운영 메모</strong> ${esc(item.applied_note)}</p>`);
+        const bodyHtml = item.content_locked
+            ? `<form class="eruso-board-form" data-board-unlock>
+                    <p class="eruso-board-sub">비밀번호가 있는 글입니다. 비밀번호를 입력하면 내용을 확인할 수 있습니다.</p>
+                    <label>비밀번호
+                        <input name="password" type="password" required autocomplete="current-password">
+                    </label>
+                    <p class="eruso-board-error" data-unlock-error hidden></p>
+                    <div class="eruso-board-form-actions">
+                        <button type="submit" class="eruso-board-write-btn">내용 확인</button>
+                    </div>
+               </form>`
+            : `<div class="eruso-board-detail-body">${esc(item.content).replace(/\n/g, "<br>")}</div>
+               ${extra.length ? `<div class="eruso-board-detail-note">${extra.join("")}</div>` : ""}`;
         body.innerHTML = `
             <button type="button" class="eruso-board-back" data-board-back>← 목록</button>
-            <h3 class="eruso-board-detail-title">${esc(item.title)}</h3>
+            <h3 class="eruso-board-detail-title">${item.has_password ? "🔒 " : ""}${esc(item.title)}</h3>
             <div class="eruso-board-detail-meta">
                 <span>${esc(catLabel(item.category))}</span>
-                <span>작성자 ${esc(displayAuthor(item.author_name))}</span>
+                <span>작성자 ${esc(displayAuthor(item))}</span>
                 <span>작성일 ${esc(fmtDate(item.created_at, true))}</span>
                 <span>상태 ${esc(statusText(item))}</span>
             </div>
-            <div class="eruso-board-detail-body">${esc(item.content).replace(/\n/g, "<br>")}</div>
-            ${extra.length ? `<div class="eruso-board-detail-note">${extra.join("")}</div>` : ""}
+            ${bodyHtml}
         `;
         body.querySelector("[data-board-back]").addEventListener("click", () => loadList());
+        const unlockForm = body.querySelector("[data-board-unlock]");
+        if (unlockForm) {
+            unlockForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const errEl = unlockForm.querySelector("[data-unlock-error]");
+                const btn = unlockForm.querySelector('button[type="submit"]');
+                errEl.hidden = true;
+                btn.disabled = true;
+                try {
+                    detailItem = await api("/api/community/feedback/" + encodeURIComponent(item.id) + "/unlock", {
+                        method: "POST",
+                        body: JSON.stringify({ password: (unlockForm.password.value || "").trim() }),
+                    });
+                    renderDetail(detailItem, false);
+                } catch (err) {
+                    errEl.hidden = false;
+                    errEl.textContent = err.message || "비밀번호가 일치하지 않습니다.";
+                    btn.disabled = false;
+                }
+            });
+        }
     }
 
     async function openDetail(id) {
@@ -378,7 +455,7 @@
                     <input name="guest_name" maxlength="100" required placeholder="이름 또는 닉네임" autocomplete="name">
                 </label>
                 <label>비밀번호 <span class="eruso-board-opt">(선택)</span>
-                    <input name="guest_password" type="password" maxlength="64" placeholder="나중에 글을 수정할 때 사용합니다" autocomplete="new-password">
+                    <input name="guest_password" type="password" maxlength="64" placeholder="내용을 확인할 때 사용합니다" autocomplete="new-password">
                 </label>
                 <label>제목
                     <input name="title" maxlength="200" required placeholder="제목을 입력하세요">
@@ -437,7 +514,20 @@
             });
             page = 1;
             if (res && res.id) {
-                await openDetail(res.id);
+                if (payload.guest_password) {
+                    try {
+                        detailItem = await api("/api/community/feedback/" + encodeURIComponent(res.id) + "/unlock", {
+                            method: "POST",
+                            body: JSON.stringify({ password: payload.guest_password }),
+                        });
+                        setView("detail");
+                        renderDetail(detailItem, false);
+                    } catch (_) {
+                        await openDetail(res.id);
+                    }
+                } else {
+                    await openDetail(res.id);
+                }
             } else {
                 await loadList();
             }
@@ -459,6 +549,11 @@
         overlay.removeAttribute("hidden");
         page = 1;
         category = "all";
+        titleQ = "";
+        authorQ = "";
+        statusFilter = "all";
+        dateFrom = "";
+        dateTo = "";
         if (startView === "write") showWrite();
         else loadList();
         overlay.querySelector(".eruso-board-close")?.focus();
