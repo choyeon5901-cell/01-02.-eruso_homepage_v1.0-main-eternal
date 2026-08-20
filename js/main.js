@@ -18,7 +18,7 @@ const heroVideo = document.querySelector('[data-hero-video]');
 const heroSlideshow = document.querySelector('[data-hero-slideshow]');
 const heroCaption = document.querySelector('[data-hero-caption]');
 const HERO_SLIDE_MS = 6500;
-const NAV_DRAWER_MQ = window.matchMedia('(max-width: 1680px)');
+const NAV_DRAWER_MQ = window.matchMedia('(max-width: 1560px)');
 let heroSlideTimer = null;
 let heroLoopActive = true;
 let navBodyOverflowPrev = '';
@@ -26,7 +26,7 @@ let navMenuHomeParent = navInner;
 let navMenuHomeNext = null;
 
 function isNavDrawerMode() {
-    return true;
+    return NAV_DRAWER_MQ.matches;
 }
 
 function placeNavMenuForViewport() {
