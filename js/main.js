@@ -3,7 +3,7 @@ const navToggle = document.querySelector('.nav-toggle');
 const navMenu = document.querySelector('.nav-menu');
 const navDrawerBackdrop = document.getElementById('navDrawerBackdrop');
 const navInner = document.querySelector('.nav-inner');
-const navLinks = document.querySelectorAll('.nav-menu a, .nav-brand, .nav-cta, .hero-actions a, .footer a');
+const navLinks = document.querySelectorAll('.nav-menu a, .nav-brand, .nav-quick, .nav-cta, .hero-actions a, .footer a');
 const scrollTopBtn = document.getElementById('scrollToTop');
 const contactForm = document.getElementById('contactForm');
 const phoneInput = document.getElementById('phone') || document.getElementById('contactPhone');
@@ -18,43 +18,20 @@ const heroVideo = document.querySelector('[data-hero-video]');
 const heroSlideshow = document.querySelector('[data-hero-slideshow]');
 const heroCaption = document.querySelector('[data-hero-caption]');
 const HERO_SLIDE_MS = 6500;
-const NAV_DRAWER_MQ = window.matchMedia('(max-width: 1560px)');
 let heroSlideTimer = null;
 let heroLoopActive = true;
 let navBodyOverflowPrev = '';
-let navMenuHomeParent = navInner;
-let navMenuHomeNext = null;
 
-function isNavDrawerMode() {
-    return NAV_DRAWER_MQ.matches;
-}
-
+/** 상단은 핵심 CTA만, 전체 메뉴는 항상 햄버거 드로어 */
 function placeNavMenuForViewport() {
-    if (!navMenu || !navInner) return;
+    if (!navMenu) return;
 
-    if (isNavDrawerMode()) {
-        // fixed 기준을 viewport로 — navbar 밖으로 이동
-        if (navMenu.parentElement !== document.body) {
-            navMenuHomeParent = navMenu.parentElement;
-            navMenuHomeNext = navMenu.nextSibling;
-            document.body.appendChild(navMenu);
-        }
-        if (navDrawerBackdrop && navDrawerBackdrop.parentElement !== document.body) {
-            document.body.appendChild(navDrawerBackdrop);
-        }
-        return;
+    if (navMenu.parentElement !== document.body) {
+        document.body.appendChild(navMenu);
     }
-
-    // 데스크톱: 네비 안으로 복귀
-    if (navMenu.parentElement !== navInner) {
-        const anchor = navInner.querySelector('.nav-right');
-        if (anchor) navInner.insertBefore(navMenu, anchor);
-        else navInner.appendChild(navMenu);
+    if (navDrawerBackdrop && navDrawerBackdrop.parentElement !== document.body) {
+        document.body.appendChild(navDrawerBackdrop);
     }
-    if (navDrawerBackdrop && navbar && navDrawerBackdrop.parentElement !== navbar) {
-        navbar.appendChild(navDrawerBackdrop);
-    }
-    closeMenu();
 }
 
 function clearHeroSlideTimer() {
@@ -429,7 +406,7 @@ function updateNavState() {
 function setNavDrawerOpen(open) {
     if (!navMenu || !navToggle) return;
 
-    if (open && isNavDrawerMode()) {
+    if (open) {
         placeNavMenuForViewport();
     }
 
@@ -568,11 +545,6 @@ document.addEventListener('keydown', (event) => {
 });
 
 placeNavMenuForViewport();
-if (typeof NAV_DRAWER_MQ.addEventListener === 'function') {
-    NAV_DRAWER_MQ.addEventListener('change', placeNavMenuForViewport);
-} else if (typeof NAV_DRAWER_MQ.addListener === 'function') {
-    NAV_DRAWER_MQ.addListener(placeNavMenuForViewport);
-}
 
 navLinks.forEach((link) => {
     link.addEventListener('click', (event) => {
