@@ -154,15 +154,21 @@ button {
 .nav-menu {
     display: flex;
     align-items: center;
-    justify-content: space-evenly;
+    justify-content: flex-start;
     flex-wrap: nowrap;
     gap: 0;
     flex: 1 1 auto;
     min-width: 0;
     list-style: none;
     margin: 0;
-    padding: 0 8px;
-    overflow: hidden;
+    padding: 0 4px;
+    /* 메뉴가 잘려 '빈 공간'처럼 보이지 않도록 */
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+}
+.nav-menu::-webkit-scrollbar {
+    display: none;
 }
 
 .nav-menu > .nav-menu-panel-head {
@@ -194,7 +200,7 @@ button {
     content: "";
     width: 1px;
     height: 14px;
-    margin: 0 20px;
+    margin: 0 10px;
     background: rgba(23, 33, 31, 0.14);
     flex-shrink: 0;
 }
@@ -203,9 +209,9 @@ button {
     display: inline-flex;
     align-items: center;
     height: 42px;
-    padding: 0 4px;
+    padding: 0 2px;
     color: var(--charcoal);
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
     letter-spacing: -0.02em;
     white-space: nowrap;
@@ -2618,39 +2624,10 @@ button {
     }
 }
 
-/* 넓은 데스크톱: 메뉴 간격 유지 (너무 조이지 않음) */
-@media (max-width: 1560px) and (min-width: 1401px) {
-    .nav-menu a {
-        font-size: 13px;
-    }
+/* 넓은 데스크톱(>1560): 가로 메뉴 유지. 1560 이하는 햄버거 드로어 */
 
-    .nav-menu li + li::before {
-        margin: 0 12px;
-    }
-
-    .brand-service {
-        display: inline-flex;
-        font-size: 13px;
-        height: 30px;
-        padding: 0 12px;
-    }
-}
-
-@media (max-width: 1480px) and (min-width: 1401px) {
-    .nav-quick {
-        display: none;
-    }
-
-    .nav-menu a {
-        font-size: 12px;
-    }
-
-    .nav-menu li + li::before {
-        margin: 0 8px;
-    }
-}
-
-@media (max-width: 1400px) {
+/* 메뉴가 잘리기 전에 햄버거로 전환 (기존 1400 → 1560) */
+@media (max-width: 1560px) {
     .nav-cta,
     .nav-quick {
         display: none !important;
@@ -2687,12 +2664,11 @@ button {
         pointer-events: none;
         overflow: hidden;
         text-overflow: ellipsis;
-        /* 기존 대비 약 30% 확대 */
-        font-size: 20px;
+        font-size: 16px;
         font-weight: 800;
-        height: 50px;
-        padding: 0 24px;
-        max-width: min(62vw, 360px);
+        height: 40px;
+        padding: 0 16px;
+        max-width: min(62vw, 320px);
         letter-spacing: -0.02em;
         border-radius: 10px;
     }
@@ -2740,6 +2716,7 @@ button {
         width: 100%;
         max-height: min(88vh, 720px);
         overflow-y: auto;
+        overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
         padding: 16px 14px calc(20px + env(safe-area-inset-bottom, 0px));
@@ -2749,6 +2726,7 @@ button {
         box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.18);
         z-index: 100001;
         box-sizing: border-box;
+        scrollbar-width: auto;
     }
 
     .nav-menu.active {
@@ -5163,6 +5141,70 @@ h1, h2, h3, h4, p, li, label, .btn, .nav-menu a {
     font-size: 15px;
     line-height: 1.6;
 }
+.eruso-board-search {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 0 0 14px;
+    padding: 14px;
+    border: 1px solid rgba(31, 53, 86, 0.12);
+    border-radius: 12px;
+    background: #fff;
+    box-sizing: border-box;
+}
+.eruso-board-search-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 10px 12px;
+}
+.eruso-board-search label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: #1F3556;
+}
+.eruso-board-search input,
+.eruso-board-search select {
+    min-width: 120px;
+    min-height: 38px;
+    padding: 6px 10px;
+    border: 1.5px solid rgba(31, 53, 86, 0.2);
+    border-radius: 8px;
+    background: #FAF8F5;
+    color: #1F2937;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+.eruso-board-search input[type="date"] {
+    min-width: 148px;
+}
+.eruso-board-search input[name="title"],
+.eruso-board-search input[name="author"] {
+    min-width: 180px;
+}
+.eruso-board-search-go,
+.eruso-board-search-reset {
+    min-height: 38px;
+    padding: 0 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.eruso-board-search-go {
+    border: none;
+    background: #1F3556;
+    color: #FAF8F5;
+}
+.eruso-board-search-reset {
+    border: 1.5px solid rgba(31, 53, 86, 0.22);
+    background: transparent;
+    color: #1F3556;
+}
 .eruso-board-toolbar {
     display: flex;
     align-items: center;
@@ -5397,5 +5439,22 @@ h1, h2, h3, h4, p, li, label, .btn, .nav-menu a {
     .eruso-board-card span {
         color: #6B7280;
         font-size: 13px;
+    }
+    .eruso-board-search {
+        gap: 10px;
+        padding: 12px;
+    }
+    .eruso-board-search-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+    .eruso-board-search-actions {
+        width: 100%;
+    }
+    .eruso-board-search-go,
+    .eruso-board-search-reset {
+        flex: 1;
+        min-height: 42px;
     }
 }
