@@ -26,7 +26,7 @@
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/memorial.css?v=20260819-footer">
+    <link rel="stylesheet" href="css/memorial.css?v=20260820-board-reply">
     <!-- eternal_memory 연동 (로컬 호스트에서는 JS가 localhost로 자동 전환) -->
     <meta name="eruso-api-base" content="https://api.erum2026.co.kr">
     <meta name="eruso-app-base" content="https://erum2026.co.kr">
@@ -94,15 +94,6 @@
                 <img src="images/logo-eruso-final-02.png" alt="이루소 로고" class="nav-logo">
             </a>
             <span class="brand-service">온라인 디지털 추모관</span>
-            <ul class="nav-menu-core" aria-label="핵심 메뉴">
-                <li><a href="#about">소개</a></li>
-                <li><a href="#columbarium">장례 시설</a></li>
-                <li><a href="#workflow-guide">영상 안내</a></li>
-                <li><a href="#process">회원가입방법</a></li>
-                <li><a href="#cyber-apply">이용안내</a></li>
-                <li><a class="js-community-board" data-community-view="list" href="https://erum2026.co.kr/community">게시판</a></li>
-                <li><a href="#memorial">추모관 둘러보기</a></li>
-            </ul>
             <ul class="nav-menu" id="navMenu">
                 <li class="nav-menu-panel-head" aria-hidden="true">
                     <div class="nav-menu-panel-title">메뉴</div>
@@ -117,8 +108,6 @@
                 <li><a href="#process"><i class="fas fa-user-plus" aria-hidden="true"></i><span>회원가입방법</span></a></li>
                 <li><a href="#cyber-apply"><i class="fas fa-list-ol" aria-hidden="true"></i><span>이용안내</span></a></li>
                 <li><a href="#cyber-apply"><i class="fas fa-envelope" aria-hidden="true"></i><span>문의</span></a></li>
-                <li><a href="#cyber-apply" data-service="온라인 추모관 개설"><i class="fas fa-calendar-check" aria-hidden="true"></i><span>상담 신청</span></a></li>
-                <li><a href="#memorial"><i class="fas fa-heart" aria-hidden="true"></i><span>추모관 둘러보기</span></a></li>
                 <li><a id="navCommunityLink" class="js-community-board" data-community-view="list" href="https://erum2026.co.kr/community"><i class="fas fa-comments" aria-hidden="true"></i><span>게시판</span></a></li>
             </ul>
             <div class="nav-right">
@@ -1381,7 +1370,7 @@
                     <img src="images/logo-eruso-final-02.png" alt="이루소 로고">
                     <span>온라인 추모 서비스 | 기억을 오래 머물게 하는 디지털 추모관</span>
                 </div>
-                <p style="letter-spacing: 1px;">기억을 존중하고, 남겨진 마음을 안전하게 보관하는 디지털 추모 플랫폼</p>
+                <p style="text-align: right;"  style="letter-spacing: 1px;">기억을 존중하고, 남겨진 마음을 안전하게 보관하는 디지털 추모 플랫폼</p>
             </div>
             <div>
                 <h3>서비스</h3>
@@ -1421,8 +1410,8 @@
     </button>
 
     <script src="js/elevisorPresence.js?v=20260812-accesslog2"></script>
-    <script src="js/main.js?v=20260818-nav-fix"></script>
-    <script src="js/community-board.js?v=20260819-board-lock"></script>
+    <script src="js/main.js?v=20260818-board-nav"></script>
+    <script src="js/community-board.js?v=20260820-board-reply"></script>
     <script src="js/columbarium.js?v=20260815-service-types8"></script>
 </body>
 </html>
