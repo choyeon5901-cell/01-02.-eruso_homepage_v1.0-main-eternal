@@ -253,10 +253,11 @@
             rows = items.map((item, idx) => {
                 const no = total - ((page - 1) * PAGE_SIZE + idx);
                 const lock = item.has_password ? "🔒 " : "";
+                const replied = (!item.content_locked && item.public_reply) ? "[답변] " : "";
                 return `<tr class="eruso-board-row" data-board-id="${item.id}" tabindex="0">
                     <td class="is-center">${no}</td>
                     <td class="is-center">${esc(catLabel(item.category))}</td>
-                    <td class="is-title">${lock}${esc(item.title)}</td>
+                    <td class="is-title">${lock}${replied}${esc(item.title)}</td>
                     <td class="is-center">${esc(displayAuthor(item))}</td>
                     <td class="is-center">${esc(fmtDate(item.created_at))}</td>
                     <td class="is-center">${esc(statusText(item))}</td>
@@ -268,9 +269,10 @@
             ? items.map((item, idx) => {
                 const no = total - ((page - 1) * PAGE_SIZE + idx);
                 const lock = item.has_password ? "🔒 " : "";
+                const replied = (!item.content_locked && item.public_reply) ? "[답변] " : "";
                 return `<button type="button" class="eruso-board-card" data-board-id="${item.id}">
                     <span class="eruso-board-card-meta">${esc(catLabel(item.category))} · ${esc(fmtDate(item.created_at))}</span>
-                    <strong>${no}. ${lock}${esc(item.title)}</strong>
+                    <strong>${no}. ${lock}${replied}${esc(item.title)}</strong>
                     <span>${esc(displayAuthor(item))} · ${esc(statusText(item))}</span>
                 </button>`;
             }).join("")
@@ -374,14 +376,27 @@
             if (item.status === "approved" && item.expected_at) {
                 extra.push(`<p><strong>적용예상시간</strong> ${esc(fmtExpected(item.expected_at))}</p>`);
             }
-            if (item.status === "rejected" && item.reviewer_note && !String(item.reviewer_note).startsWith("[AI 자동처리]")) {
+            if (
+                item.status === "rejected"
+                && item.reviewer_note
+                && !String(item.reviewer_note).startsWith("[AI 자동처리]")
+                && !item.public_reply
+            ) {
                 extra.push(`<p><strong>반려사유</strong> ${esc(item.reviewer_note)}</p>`);
             }
-            if (item.applied_note) extra.push(`<p><strong>운영 메모</strong> ${esc(item.applied_note)}</p>`);
         }
+        const replyHtml = (!item.content_locked && item.public_reply)
+            ? `<div class="eruso-board-reply" role="region" aria-label="운영 답변글">
+                    <div class="eruso-board-reply-head">
+                        <span class="eruso-board-reply-badge">답변</span>
+                        <span class="eruso-board-reply-meta">운영자${item.replied_at ? ` · ${esc(fmtDate(item.replied_at, true))}` : ""}</span>
+                    </div>
+                    <div class="eruso-board-reply-body">${esc(item.public_reply).replace(/\n/g, "<br>")}</div>
+               </div>`
+            : "";
         const bodyHtml = item.content_locked
             ? `<form class="eruso-board-form" data-board-unlock>
-                    <p class="eruso-board-sub">비밀번호가 있는 글입니다. 비밀번호를 입력하면 내용을 확인할 수 있습니다.</p>
+                    <p class="eruso-board-sub">비밀번호가 있는 글입니다. 비밀번호를 입력하면 내용과 답변을 확인할 수 있습니다.</p>
                     <label>비밀번호
                         <input name="password" type="password" required autocomplete="current-password">
                     </label>
@@ -391,10 +406,11 @@
                     </div>
                </form>`
             : `<div class="eruso-board-detail-body">${esc(item.content).replace(/\n/g, "<br>")}</div>
+               ${replyHtml}
                ${extra.length ? `<div class="eruso-board-detail-note">${extra.join("")}</div>` : ""}`;
         body.innerHTML = `
             <button type="button" class="eruso-board-back" data-board-back>← 목록</button>
-            <h3 class="eruso-board-detail-title">${item.has_password ? "🔒 " : ""}${esc(item.title)}</h3>
+            <h3 class="eruso-board-detail-title">${item.has_password ? "🔒 " : ""}${(!item.content_locked && item.public_reply) ? "[답변] " : ""}${esc(item.title)}</h3>
             <div class="eruso-board-detail-meta">
                 <span>${esc(catLabel(item.category))}</span>
                 <span>작성자 ${esc(displayAuthor(item))}</span>
