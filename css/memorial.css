@@ -2389,9 +2389,8 @@ button {
 
 .footer-brand {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 12px;
-    margin-bottom: 16px;
 }
 
 .footer-brand img {
@@ -2399,11 +2398,30 @@ button {
     height: 34px;
     object-fit: contain;
     filter: brightness(0) invert(1);
+    flex-shrink: 0;
+}
+
+.footer-brand-copy {
+    min-width: 0;
 }
 
 .footer-brand span {
+    display: block;
     color: #f5d295;
     font-weight: 900;
+    line-height: 1.45;
+}
+
+.footer-tagline {
+    margin: 10px 0 0;
+    text-align: left;
+    letter-spacing: 0.02em;
+    line-height: 1.65;
+    max-width: 42ch;
+}
+
+.footer-terms-title {
+    margin-top: 28px;
 }
 
 .footer p,
