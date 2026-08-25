@@ -58,9 +58,10 @@ function activateHeroVideo() {
     // 로딩 중에도 포스터/슬라이드가 보이도록 유지 → 첫 페인트 검정 방지
     if (heroSlideshow) {
         heroSlideshow.classList.add('is-active');
-        heroSlideshow.classList.remove('is-waiting');
+        heroSlideshow.classList.remove('is-waiting', 'is-breathing');
     }
 
+    heroVideo.classList.remove('is-leaving');
     heroVideo.classList.add('is-active');
     try {
         heroVideo.muted = true;
@@ -128,22 +129,35 @@ function activateHeroVideo() {
 function revealHeroSlideshow() {
     showHeroCaption(false);
 
-    if (heroVideo) {
-        heroVideo.classList.remove('is-active');
-        try { heroVideo.pause(); } catch (_) { /* ignore */ }
-    }
-
-    if (heroSlideshow) {
-        heroSlideshow.classList.remove('is-waiting');
-        heroSlideshow.classList.add('is-active');
-    }
-
-    // reset to first still — leaving 잔여 클래스 정리
+    // 첫 사진을 영상 아래에 먼저 깔아 두고, 영상은 transform 고정 후 페이드아웃
     heroSlides.forEach((el, i) => {
         el.classList.toggle('is-active', i === 0);
         el.classList.remove('is-leaving');
     });
-    startHeroSlideshow();
+
+    if (heroSlideshow) {
+        heroSlideshow.classList.remove('is-waiting', 'is-breathing');
+        heroSlideshow.classList.add('is-active');
+    }
+
+    const beginBreathAndSlides = () => {
+        if (heroSlideshow) heroSlideshow.classList.add('is-breathing');
+        startHeroSlideshow();
+    };
+
+    if (heroVideo) {
+        // 현재 Ken Burns 프레임을 유지한 채 opacity만 내림
+        heroVideo.classList.add('is-leaving');
+        heroVideo.classList.remove('is-active');
+        window.setTimeout(() => {
+            heroVideo.classList.remove('is-leaving');
+            try { heroVideo.pause(); } catch (_) { /* ignore */ }
+            beginBreathAndSlides();
+        }, 1900);
+        return;
+    }
+
+    beginBreathAndSlides();
 }
 
 function startHeroSlideshow() {
