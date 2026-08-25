@@ -138,8 +138,11 @@ function revealHeroSlideshow() {
         heroSlideshow.classList.add('is-active');
     }
 
-    // reset to first still
-    heroSlides.forEach((el, i) => el.classList.toggle('is-active', i === 0));
+    // reset to first still — leaving 잔여 클래스 정리
+    heroSlides.forEach((el, i) => {
+        el.classList.toggle('is-active', i === 0);
+        el.classList.remove('is-leaving');
+    });
     startHeroSlideshow();
 }
 
@@ -150,6 +153,7 @@ function startHeroSlideshow() {
     let index = Array.from(heroSlides).findIndex((el) => el.classList.contains('is-active'));
     if (index < 0) index = 0;
     let steps = 0;
+    let leaveTimer = null;
 
     heroSlideTimer = window.setInterval(() => {
         steps += 1;
@@ -157,15 +161,27 @@ function startHeroSlideshow() {
         // 마지막 장까지 충분히 보여준 뒤 영상으로 복귀
         if (heroLoopActive && heroVideo && steps >= heroSlides.length) {
             clearHeroSlideTimer();
+            if (leaveTimer) window.clearTimeout(leaveTimer);
             window.setTimeout(() => {
                 if (heroLoopActive) activateHeroVideo();
-            }, 400);
+            }, 500);
             return;
         }
 
-        heroSlides[index].classList.remove('is-active');
-        index = (index + 1) % heroSlides.length;
-        heroSlides[index].classList.add('is-active');
+        const prev = heroSlides[index];
+        const next = (index + 1) % heroSlides.length;
+        const incoming = heroSlides[next];
+
+        // 다음 장을 먼저 켠 뒤, 이전 장은 위에 두고 페이드아웃 → 검정 깜빡임/튐 방지
+        incoming.classList.add('is-active');
+        prev.classList.add('is-leaving');
+        prev.classList.remove('is-active');
+        if (leaveTimer) window.clearTimeout(leaveTimer);
+        leaveTimer = window.setTimeout(() => {
+            prev.classList.remove('is-leaving');
+        }, 1900);
+
+        index = next;
     }, HERO_SLIDE_MS);
 }
 
@@ -180,9 +196,13 @@ function startHeroLifeJourney() {
             clearHeroSlideTimer();
             let index = 0;
             heroSlideTimer = window.setInterval(() => {
-                heroSlides[index].classList.remove('is-active');
-                index = (index + 1) % heroSlides.length;
-                heroSlides[index].classList.add('is-active');
+                const prev = heroSlides[index];
+                const next = (index + 1) % heroSlides.length;
+                heroSlides[next].classList.add('is-active');
+                prev.classList.add('is-leaving');
+                prev.classList.remove('is-active');
+                window.setTimeout(() => prev.classList.remove('is-leaving'), 1900);
+                index = next;
             }, HERO_SLIDE_MS);
         }
         return;
@@ -830,7 +850,7 @@ console.log('ERUSO Memorial System page loaded.');
         if (totalPages <= 1) { pagerEl.innerHTML = ''; return; }
 
         const btnBase = 'display:inline-flex;align-items:center;justify-content:center;' +
-            'width:34px;height:34px;border-radius:8px;border:1.5px solid;' +
+            'width:34px;height:34px;border-radius:2px;border:1.5px solid;' +
             'font-size:13px;font-weight:700;cursor:pointer;transition:all .18s;';
 
         let html = '';
