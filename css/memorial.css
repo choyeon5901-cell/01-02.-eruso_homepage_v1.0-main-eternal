@@ -443,12 +443,11 @@ button {
     animation: heroBreath 28s ease-in-out infinite alternate;
 }
 
-/* 종료 시 transform 유지(paused) + 페이드아웃 — 스케일 스냅 방지 */
+/* 페이드아웃 중에도 Ken Burns·재생 유지 — 정지 프레임처럼 보이지 않게 */
 .hero-video.is-leaving {
     opacity: 0;
     z-index: 2;
     animation: heroBreath 28s ease-in-out infinite alternate;
-    animation-play-state: paused;
     pointer-events: none;
 }
 
