@@ -1363,79 +1363,58 @@
         </section>
     </main>
 
-    <footer class="footer">
-        <div class="container footer-grid">
-            <div>
-                <div class="footer-brand">
-                    <img src="images/logo-eruso-final-02.png" alt="이루소 로고">
-                    <div class="footer-brand-copy">
-                        <span>온라인 추모 서비스 | 기억을 오래 머물게 하는 디지털 추모관</span>
-                        <p class="footer-tagline">기억을 존중하고, 남겨진 마음을 안전하게 보관하는 디지털 추모 플랫폼</p>
-                    </div>
-                </div>
+    <footer class="memorial-detail-footer" style="position: relative; z-index: 10; box-sizing: border-box; padding: 10px 32px 15px; background: var(--eruso-navy-900, #106468); color: rgba(245,241,232,0.55); text-align: center;">
+  
+    <!-- ⚠️ IrusoLogo 컴포넌트 위치: HTML에서는 작동하지 않으므로 아래와 같은 일반 img 태그로 변경해야 합니다. -->
+    <img src="images/logo-iruso-personal.png" height="60" style="display: block; margin: 0 auto 5px;" alt="이루소 로고">
+    
+    <div class="memorial-detail-footer-meta" style="font-size: 14px; line-height: 1.4; text-align: center;">
+        <div>
+        본점주소 : 세종특별자치시 조치원읍 장안로 41, 세종창업빌 104호 <span style="color: #23D4DD;">| </span> 
+        대표 : 강동안 <span style="color: #23D4DD;">| </span> 
+        사업자등록번호 : 627-29-01241 <span style="color: #23D4DD;">| </span> 
+        통신판매업신고번호 : 제2023-세종조치원-0102호 <span style="color: #23D4DD;">| </span> 
+        대표번호 : 010-2960-8688 <span style="color: #23D4DD;">| </span> 
+        이메일 : dn5901@eruso.co.kr
+        </div>
+        <div style="margin-top: 2px; opacity: 0.8;"> <!-- 문단 여백 절반 축소 -->
+        &copy; Copyright ⓒ 2026 이루소 Online Memorial System. All rights reserved.
+        <p style="margin: 2px 0 0;">
+            이루소(eRUM)에서 운영하는 디지털 추모 서비스 및 유료 결제에 대한 권리와 의무는 관련 법령 및 서비스 이용약관에 따릅니다. <br>
+            개인정보보호 및 서비스 총괄 담당 : 강동안 대표 <span style="color: #23D4DD;">|</span> 고객센터 : 010-2960-8688
+        </p>
+        </div>
+    </div>
+    
+    <!-- 👇 [보완 1] 약관 및 안내 메뉴 영역 👇 -->
+    <!-- ⚠️ SiteLegalLinks 및 SiteFooterGuideRow 컴포넌트 역시 HTML에서는 작동하지 않습니다. 
+        해당 메뉴가 필요하다면 a 태그를 이용해 직접 HTML로 작성해야 합니다. -->
+    <div style="margin-top: 4px; margin-bottom: -12px;">
+        <!-- 약관 링크 a 태그 위치 -->
+    </div>
+    <!-- 안내 메뉴 영역 위치 -->
+    <!-- 👆 여기까지 메뉴 영역 👆 -->
+
+    <!-- justify-content: center 를 통해 로고와 텍스트 그룹 전체를 화면 중앙으로 정렬 -->
+    <div style="display: flex; align-items: center; justify-content: center; width: 100%; margin: 20px auto 0;">
+    
+        <img src="images/contents_logo_02.png" alt="콘텐츠 보호 마크" style="width: 45px; height: 45px; margin-right: 16px; flex-shrink: 0; object-fit: contain; background: transparent;">
+        
+        <!-- 텍스트 영역 (시작선은 깔끔하게 왼쪽으로 맞춤) -->
+        <div style="display: flex; flex-direction: column; justify-content: center; text-align: left;">
+            <div style="font-size: 14px; color: rgba(245,241,232,0.55); margin-bottom: -4px;">
+            콘텐츠의 종류 : 콘텐츠, 이벤트 정보, 디자인 및 화면의 구성, UI
             </div>
-            <div>
-                <h3>서비스</h3>
-                <a href="#features">기능</a>
-                <a href="#columbarium">장례 시설</a>
-                <a id="footerJesaTrialLink" href="https://erum2026.co.kr/service-select?mode=trial" target="_blank" rel="noopener">온라인 제사당 무료체험</a>
-                <a href="#funeral-guide">장례 안내</a>
-                <a href="#religion-guide">다양한 장례 예절</a>
-                <a href="#workflow-guide">영상 안내</a>
-                <a href="#process">회원가입방법</a>
-                <a href="#cyber-apply">이용안내</a>
-                <a href="#procedure">이용 절차</a>
-                <a href="#cyber-apply">문의</a>
-                <a id="footerCommunityLink" class="js-community-board" data-community-view="list" href="https://erum2026.co.kr/community">게시판</a>
+            <div style="font-size: 14px; color: rgba(245,241,232,0.55); margin-bottom: 0px;">
+            제작연월일 : 2026. 06. 01 <span style="color: #23D4DD;">| </span> 제작사명 : 이루소(eruso)
             </div>
-            <div class="footer-support-col">
-                <h3>고객지원</h3>
-                <a href="#cyber-apply">상담 문의</a>
-                <a href="#cyber-apply">제휴 문의</a>
-                <a href="#cyber-apply">운영 지원</a>
-                <h3 class="footer-terms-title">약관</h3>
-                <a href="/legal/service/" target="_blank" rel="noopener noreferrer">서비스 이용약관</a>
-                <a href="/legal/privacy-policy/" target="_blank" rel="noopener noreferrer">개인정보 처리방침</a>
-                <a href="/legal/privacy/" target="_blank" rel="noopener noreferrer">개인정보 수집 및 이용 동의</a>
-                <a href="/legal/marketing/" target="_blank" rel="noopener noreferrer">마케팅 정보 수신 동의</a>
+            <div style="font-size: 14px; color: rgba(245,241,232,0.55); line-height: 1.0; white-space: nowrap;">
+            이루소 온라인 추모서비스 사이트의 콘텐츠는 「콘텐츠산업 진흥법」에 따라 최초 제작일부터 5년간 보호됩니다.
             </div>
         </div>
-            <div class="footer-bottom">
-                <div>
-                본점주소 : 세종특별자치시 조치원읍 장안로 41, 세종창업빌 104호
-                <span className="!text-[#007BFF]">|</span> 대표 : 강동안
-                <span className="!text-[#007BFF]">|</span> 사업자등록번호 : 627-29-01241
-                <span className="!text-[#007BFF]">|</span> 통신판매업신고번호 : 제2023-세종조치원-0102호
-                <span className="!text-[#007BFF]">|</span> 대표번호 : 010-2960-8688
-                <span className="!text-[#007BFF]">|</span> 이메일 : dn5901@eruso.co.kr
-                </div>
-                <div className="user-site-footer__copyright">
-                Copyright ⓒ 2026 이루소 Online Eternal Memory 공식홈페이지 All rights reserved. <span className="!text-[#007BFF]">|</span> 배경음악 Meditation Impromptu 02 — Kevin MacLeod </p>
-                <p>
-                이루소(eruso)에서 운영하는 디지털 추모 서비스 및 유료 결제에 대한 권리와 의무는 관련 법령 및 서비스 이용약관에 따릅니다. 모든거래에 대한 책임과 환불, 민원등은 '이루소'에서 진행합니다.
-                <br />
-                개인정보보호 및 서비스 총괄 담당 : 강동안 대표
-                <span className="user-site-footer__sep">|</span> 고객센터 : 010-2960-8688
-                </p>
-        <div style="display: flex; align-items: center; justify-content: center; margin-top: 15px;">
-            <img
-                src="images/contents_logo_02.png" 
-                alt="콘텐츠 보호 마크" 
-                style="width: 80px; height: 80px; margin-right: 16px; flex-shrink: 0; object-fit: contain; background: transparent;"
-            >
-            <div style="display: flex; flex-direction: column; justify-content: center; text-align: left;">
-                <div style="font-size: 15px; color: #798393; margin-bottom: 4px;">
-                제작연월일 : 2026. 06. 01
-                </div>
-                <div style="font-size: 15px; color: #798393; margin-bottom: 4px;">
-                제작사명 : 이루소(eruso)
-                </div>
-                <div style="font-size: 15px; color: #798393; line-height: 1.4; white-space: nowrap;">
-                이 콘텐츠는 「콘텐츠산업 진흥법」에 따라 최초 제작일부터 5년간 보호됩니다.
-                </div>
-            </div>
-            </div>
-      </footer>
+
+    </div>
+    </footer>
 
     <button id="scrollToTop" class="scroll-to-top" type="button" aria-label="맨 위로 이동">
         <i class="fas fa-arrow-up"></i>
