@@ -18,8 +18,12 @@ const heroVideo = document.querySelector('[data-hero-video]');
 const heroSlideshow = document.querySelector('[data-hero-slideshow]');
 const heroCaption = document.querySelector('[data-hero-caption]');
 const HERO_SLIDE_MS = 6500;
+/** 영상 끝나기 이 시간(초) 전부터 사진과 교차 페이드 — 정지 프레임이 보이지 않게 */
+const HERO_VIDEO_HANDOFF_LEAD_S = 2.0;
+const HERO_VIDEO_FADE_MS = 1800;
 let heroSlideTimer = null;
 let heroLoopActive = true;
+let heroHandoffStarted = false;
 let navBodyOverflowPrev = '';
 
 /** 상단은 핵심 CTA만, 전체 메뉴는 항상 햄버거 드로어 */
@@ -48,11 +52,12 @@ function showHeroCaption(visible) {
 
 function activateHeroVideo() {
     if (!heroVideo) {
-        revealHeroSlideshow();
+        revealHeroSlideshow({ force: true });
         return;
     }
 
     clearHeroSlideTimer();
+    heroHandoffStarted = false;
     showHeroCaption(true);
 
     // 로딩 중에도 포스터/슬라이드가 보이도록 유지 → 첫 페인트 검정 방지
@@ -71,19 +76,38 @@ function activateHeroVideo() {
         heroVideo.preload = 'auto';
     } catch (_) { /* ignore */ }
 
-    const onEnded = () => {
+    const detachPlaybackWatchers = () => {
         heroVideo.removeEventListener('ended', onEnded);
         heroVideo.removeEventListener('error', onFail);
-        if (!heroLoopActive) return;
+        heroVideo.removeEventListener('timeupdate', onTimeUpdate);
+        heroVideo.removeEventListener('canplay', onReady);
+        heroVideo.removeEventListener('playing', onReady);
+    };
+
+    const tryHandoff = () => {
+        if (!heroLoopActive || heroHandoffStarted) return;
+        detachPlaybackWatchers();
         revealHeroSlideshow();
     };
 
+    const onTimeUpdate = () => {
+        const duration = heroVideo.duration;
+        const t = heroVideo.currentTime;
+        if (!Number.isFinite(duration) || duration <= 0) return;
+        // 끝나기 직전에 페이드 시작 — 재생 중인 상태로 사진과 겹침
+        if (duration - t <= HERO_VIDEO_HANDOFF_LEAD_S) {
+            tryHandoff();
+        }
+    };
+
+    const onEnded = () => {
+        // timeupdate를 놓친 짧은 영상 등 — 폴백
+        tryHandoff();
+    };
+
     const onFail = () => {
-        heroVideo.removeEventListener('ended', onEnded);
-        heroVideo.removeEventListener('error', onFail);
-        heroVideo.removeEventListener('canplay', onReady);
-        heroVideo.removeEventListener('playing', onReady);
-        revealHeroSlideshow();
+        detachPlaybackWatchers();
+        revealHeroSlideshow({ force: true });
     };
 
     const onReady = () => {
@@ -98,6 +122,7 @@ function activateHeroVideo() {
         window.dispatchEvent(new Event('eruso-hero-video-start'));
     };
 
+    heroVideo.addEventListener('timeupdate', onTimeUpdate);
     heroVideo.addEventListener('ended', onEnded, { once: true });
     heroVideo.addEventListener('error', onFail, { once: true });
     heroVideo.addEventListener('canplay', onReady);
@@ -126,10 +151,13 @@ function activateHeroVideo() {
     }
 }
 
-function revealHeroSlideshow() {
+function revealHeroSlideshow(opts = {}) {
+    if (heroHandoffStarted && !opts.force) return;
+    heroHandoffStarted = true;
+
     showHeroCaption(false);
 
-    // 첫 사진을 영상 아래에 먼저 깔아 두고, 영상은 transform 고정 후 페이드아웃
+    // 첫 사진을 영상 아래에 깔고, 영상은 계속 재생하며 페이드아웃
     heroSlides.forEach((el, i) => {
         el.classList.toggle('is-active', i === 0);
         el.classList.remove('is-leaving');
@@ -146,14 +174,14 @@ function revealHeroSlideshow() {
     };
 
     if (heroVideo) {
-        // 현재 Ken Burns 프레임을 유지한 채 opacity만 내림
         heroVideo.classList.add('is-leaving');
         heroVideo.classList.remove('is-active');
+        // pause 하지 않음 — 페이드 동안 영상이 계속 흐르게
         window.setTimeout(() => {
-            heroVideo.classList.remove('is-leaving');
             try { heroVideo.pause(); } catch (_) { /* ignore */ }
+            heroVideo.classList.remove('is-leaving');
             beginBreathAndSlides();
-        }, 1900);
+        }, HERO_VIDEO_FADE_MS);
         return;
     }
 
