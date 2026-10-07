@@ -26,7 +26,21 @@
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/memorial.css?v=20260906-garden-links">
+    <link rel="stylesheet" href="css/memorial.css?v=20260906-garden-fix">
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.3.1",
+        "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+        "react/jsx-dev-runtime": "https://esm.sh/react@18.3.1/jsx-dev-runtime",
+        "react-dom": "https://esm.sh/react-dom@18.3.1",
+        "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+        "three": "https://esm.sh/three@0.160.1",
+        "@react-three/fiber": "https://esm.sh/@react-three/fiber@8.17.10?external=react,react-dom,three",
+        "@react-three/drei": "https://esm.sh/@react-three/drei@9.117.3?external=react,react-dom,three,@react-three/fiber"
+      }
+    }
+    </script>
     <!-- eternal_memory 연동 (로컬 호스트에서는 JS가 localhost로 자동 전환) -->
     <meta name="eruso-api-base" content="https://api.erum2026.co.kr">
     <meta name="eruso-app-base" content="https://erum2026.co.kr">
@@ -109,8 +123,8 @@
                 <li><a href="#cyber-apply"><i class="fas fa-list-ol" aria-hidden="true"></i><span>이용안내</span></a></li>
                 <li><a href="#cyber-apply"><i class="fas fa-envelope" aria-hidden="true"></i><span>문의</span></a></li>
                 <li><a id="navCommunityLink" class="js-community-board" data-community-view="list" href="https://erum2026.co.kr/community"><i class="fas fa-comments" aria-hidden="true"></i><span>게시판</span></a></li>
-                <li><a href="https://garden-pet.erum2026.co.kr/" target="_blank" rel="noopener noreferrer"><i class="fas fa-paw" aria-hidden="true"></i><span>기억의 정원 · 포근한 발자국</span></a></li>
-                <li><a href="https://garden-human.erum2026.co.kr/" target="_blank" rel="noopener noreferrer"><i class="fas fa-seedling" aria-hidden="true"></i><span>기억의 정원 · 소중한 분</span></a></li>
+                <li><a href="https://garden-pet.erum2026.co.kr/" rel="noopener noreferrer"><i class="fas fa-paw" aria-hidden="true"></i><span>기억의 정원 ·<br>포근한 발자국</span></a></li>
+                <li><a href="https://garden-human.erum2026.co.kr/" rel="noopener noreferrer"><i class="fas fa-seedling" aria-hidden="true"></i><span>기억의 정원 ·<br>소중한 분</span></a></li>
             </ul>
             <div class="nav-right">
                 <a href="#process" class="nav-quick" data-nav-quick="signup">
@@ -121,13 +135,19 @@
                     <i class="fas fa-heart" aria-hidden="true"></i>
                     <span>추모관 둘러보기</span>
                 </a>
-                <a href="https://garden-pet.erum2026.co.kr/" class="nav-quick" data-nav-quick="garden-pet" target="_blank" rel="noopener noreferrer" aria-label="기억의 정원 · 포근한 발자국">
+                <a href="https://garden-pet.erum2026.co.kr/" class="nav-quick" data-nav-quick="garden-pet" rel="noopener noreferrer" aria-label="기억의 정원 · 포근한 발자국">
                     <i class="fas fa-paw" aria-hidden="true"></i>
-                    <span><small>기억의 정원</small>포근한 발자국</span>
+                    <span class="nav-quick-label">
+                        <span class="nav-quick-kicker">기억의 정원</span>
+                        <span class="nav-quick-name">포근한 발자국</span>
+                    </span>
                 </a>
-                <a href="https://garden-human.erum2026.co.kr/" class="nav-quick" data-nav-quick="garden-human" target="_blank" rel="noopener noreferrer" aria-label="기억의 정원 · 소중한 분">
+                <a href="https://garden-human.erum2026.co.kr/" class="nav-quick" data-nav-quick="garden-human" rel="noopener noreferrer" aria-label="기억의 정원 · 소중한 분">
                     <i class="fas fa-seedling" aria-hidden="true"></i>
-                    <span><small>기억의 정원</small>소중한 분</span>
+                    <span class="nav-quick-label">
+                        <span class="nav-quick-kicker">기억의 정원</span>
+                        <span class="nav-quick-name">소중한 분</span>
+                    </span>
                 </a>
                 <a id="navCommunityCta" class="nav-board js-community-board" data-community-view="list" href="https://erum2026.co.kr/community">
                     <i class="fas fa-comments" aria-hidden="true"></i>
@@ -561,7 +581,7 @@
                         </div>
                     </div>
                     <p id="columbFloorStats" class="columb-floor-stats" aria-live="polite"></p>
-                    <canvas id="columbariumCanvas" width="900" height="520" style="width:100%;border-radius:12px;cursor:pointer;display:block;" aria-label="봉안당 배치도"></canvas>
+                    <div id="columbarium-template-root" class="columb-template-root"></div>
                     <div class="columb-info-panel" id="columbInfoPanel" style="display:none">
                         <div id="columbInfoContent"></div>
                         <button class="columb-info-close" id="columbInfoClose" aria-label="닫기">✕</button>
@@ -1431,8 +1451,9 @@
     </button>
 
     <script src="js/elevisorPresence.js?v=20260812-accesslog2"></script>
-    <script src="js/main.js?v=20260825-hero-playfade"></script>
+    <script src="js/main.js?v=20261004-bgm-leave"></script>
     <script src="js/community-board.js?v=20260820-nav-board-fix2"></script>
-    <script src="js/columbarium.js?v=20260820-radius-2px"></script>
+    <script src="js/columbarium-templates.js?v=20261005-r3f"></script>
+    <script src="js/columbarium.js?v=20261006-halldata"></script>
 </body>
 </html>
