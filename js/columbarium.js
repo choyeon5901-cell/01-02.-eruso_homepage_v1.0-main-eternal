@@ -510,10 +510,12 @@
         return true;
     }
 
-    function showInfo(r, c) {
+    function showInfo(r, c, cellOverride) {
         const key  = `${r}-${c}`;
-        const cell = getData()[key];
+        const cell = cellOverride || getData()[key];
         if (!cell) return;
+        const zone = cell.zone || activeZone;
+        const floor = cell.floor || activeFloor;
 
         const facilityLine = selectedFacility
             ? `<p style="font-size:12px;color:rgba(200,169,110,0.75);margin:0 0 6px;">${esc(selectedFacility.name)}</p>`
@@ -564,7 +566,7 @@
             ${facilityLine}
             ${columbLine}
             <p style="font-size:13px;color:rgba(200,169,110,0.8);font-weight:700;margin:0 0 4px;">
-                ${activeZone}동 ${activeFloor}층 / ${esc(cell.id)}
+                ${zone}동 ${floor}층 / ${esc(cell.id)}
             </p>
             ${badge}
             ${detail}
@@ -590,7 +592,9 @@
         const msg = document.getElementById('contactMessage');
         if (msg) {
             const fac = selectedFacility?.name || '봉안당';
-            const niche = cell?.id ? `${activeZone}동 ${activeFloor}층 / ${cell.id}` : `${activeZone}동 ${activeFloor}층`;
+            const zone = cell?.zone || activeZone;
+            const floor = cell?.floor || activeFloor;
+            const niche = cell?.id ? `${zone}동 ${floor}층 / ${cell.id}` : `${zone}동 ${floor}층`;
             const preset = `${fac} ${niche} 봉안함 분양 상담을 요청합니다.`;
             if (!msg.value.trim() || msg.value.includes('분양 상담')) {
                 msg.value = preset;
@@ -1021,6 +1025,40 @@
             draw();
             showInfo(row, col);
             publish();
+        },
+        showSlot(slot) {
+            if (!slot) return;
+            const raw = slot.cell || {};
+            const rowLabel = Number(raw.row) || (slot.r + 1);
+            const colLabel = Number(raw.col) || (slot.c + 1);
+            const zone = raw.zone || activeZone;
+            const floor = String(raw.floor || activeFloor);
+            const isPublic = raw.is_public === true || slot.isPublic === true;
+            const go = raw.href
+                ? `${appBase}${raw.href}`
+                : (raw.view_path
+                    ? `${appBase}${raw.view_path}`
+                    : (raw.login_path ? `${appBase}${raw.login_path}` : null));
+            showInfo(slot.r, slot.c, {
+                id: `${zone}${floor}-${String(rowLabel).padStart(2, '0')}${String(colLabel).padStart(2, '0')}`,
+                zone,
+                floor,
+                row: rowLabel,
+                col: colLabel,
+                occupied: !!(raw.occupied || slot.occupied),
+                name: raw.name || raw.deceased_name || null,
+                deceased_name: raw.deceased_name || null,
+                title: raw.title || null,
+                birth: raw.birth || null,
+                death: raw.death || null,
+                is_public: isPublic,
+                go_url: go,
+                view_url: isPublic && raw.view_path ? `${appBase}${raw.view_path}` : null,
+                login_url: !isPublic && raw.login_path ? `${appBase}${raw.login_path}` : null,
+                columbarium_name: raw.columbarium_name || null,
+                columbarium_kind: raw.columbarium_kind || null,
+                price: (raw.occupied || slot.occupied) ? null : (raw.price || '상담 문의'),
+            });
         },
         getSnapshot: snapshot,
         bindCanvas,
