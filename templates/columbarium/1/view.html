@@ -1,0 +1,91 @@
+<div class="s1">
+    <div class="s1-head">
+        <div class="s1-eyebrow">
+            <span class="material-symbols-outlined">domain</span>
+            <span>Columbarium 3D Interior Experience</span>
+        </div>
+        <h3 class="s1-title">장례 시설 · 봉안당 실감형 3D 가상 투어</h3>
+        <p class="s1-lead">봉안함을 누르면 그 정면으로 다가갑니다. 좌우로 넘기면 다음 호실입니다.</p>
+    </div>
+
+    <div class="s1-card">
+        <div class="s1-banner">
+            <div class="s1-banner-main">
+                <span class="s1-chip" data-tpl-badge>템플릿 #1</span>
+                <span class="s1-chip s1-chip-amber">안치 현황 연동</span>
+                <strong class="s1-facility" data-facility-name>세종봉안당</strong>
+                <span class="s1-meta">
+                    <span class="material-symbols-outlined">location_on</span>
+                    <span data-facility-address>세종특별자치시 조치원읍 장안로 41</span>
+                </span>
+                <span class="s1-meta">
+                    <span class="material-symbols-outlined">call</span>
+                    <span data-facility-phone>010-2960-8688</span>
+                </span>
+            </div>
+            <label class="s1-concept">
+                컨셉
+                <select data-concept aria-label="봉안당 컨셉"></select>
+            </label>
+            <div class="s1-modes" role="tablist" aria-label="관람 모드">
+                <span class="s1-modes-label">관람 모드</span>
+                <div class="s1-mode-tabs">
+                    <button type="button" class="s1-mode is-on" data-mode="3d">
+                        <span class="material-symbols-outlined">view_in_ar</span>
+                        3D 실감형 실내 투어
+                    </button>
+                    <button type="button" class="s1-mode" data-mode="2d">
+                        <span class="material-symbols-outlined">grid_view</span>
+                        2D 평면 매트릭스
+                    </button>
+                </div>
+                <div class="s1-mode-tabs s1-led-tabs">
+                    <button type="button" class="s1-led" data-ceiling-led aria-pressed="true">
+                        <span class="material-symbols-outlined" aria-hidden="true">wb_incandescent</span>
+                        <span data-ceiling-label>천장등 끄기</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="s1-tour" id="s1-tour" data-tour>
+            <div class="s1-stage">
+                <div class="s1-webgl" data-webgl></div>
+                <div class="s1-hover" data-hover hidden></div>
+
+                <div class="s1-island s1-island-top">
+                    <span data-seat-count>총 60석</span>
+                    <button type="button" class="s1-icon" data-full title="전체화면" aria-label="전체화면">
+                        <span class="material-symbols-outlined">fullscreen</span>
+                    </button>
+                </div>
+                <button type="button" class="s1-island s1-start" data-tour-start>둘러보기</button>
+                <section class="s1-sheet" data-sheet hidden>
+                    <div class="s1-sheet-head">
+                        <p data-sheet-kicker>호실</p>
+                        <button type="button" class="s1-icon" data-sheet-close aria-label="전체 보기">
+                            <span class="material-symbols-outlined">close</span>
+                        </button>
+                    </div>
+                    <strong data-sheet-title>분양 가능</strong>
+                    <p data-sheet-body>봉안함을 누르면 자세한 내용이 열립니다.</p>
+                    <div class="s1-sheet-nav">
+                        <button type="button" data-step="-1">이전</button>
+                        <button type="button" data-step="1">다음</button>
+                    </div>
+                    <button type="button" class="s1-sheet-go" data-sheet-consult>상담 신청</button>
+                </section>
+            </div>
+        </div>
+
+        <div class="s1-grid-wrap is-hidden" data-grid-wrap>
+            <p class="s1-grid-caption">6행 10열 (총 60구역) 2D 평면 안치 현황</p>
+            <div class="s1-grid" data-grid></div>
+        </div>
+
+        <div class="s1-foot">
+            <p><span class="material-symbols-outlined">touch_app</span> 안치함을 누르면 연동된 온라인 추모관 또는 상담으로 이동합니다.</p>
+            <button type="button" class="s1-consult" data-consult>봉안당 자리 예약 및 분양 상담 신청</button>
+        </div>
+    </div>
+</div>
