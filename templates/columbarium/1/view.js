@@ -1050,9 +1050,12 @@ function makeAltarVase() {
     return geo;
 }
 
+const FILM_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+    ? 'http://127.0.0.1:1200/assets/videos/'
+    : '/';
 const HALL_FILM_URLS = [
-    'http://127.0.0.1:1200/assets/videos/gateway-human.mp4?v=12024-noletter',
-    'http://127.0.0.1:1200/assets/videos/gateway-pet.mp4?v=12024-hq',
+    FILM_BASE + 'gateway-human.mp4?v=12024-noletter',
+    FILM_BASE + 'gateway-pet.mp4?v=12024-hq',
 ];
 
 function createFilmReel(urls) {
