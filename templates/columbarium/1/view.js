@@ -314,18 +314,22 @@ function NicheGrid({ slots, hover, selectedId, focusIndex, onHover, onSelect, co
 
     useLayoutEffect(() => {
         const look = concept || CONCEPTS[0];
-        frameMat.color.set(look.marble ? '#fbfaf7' : look.frame);
-        frameMat.emissive.set(look.marble ? '#fffaf4' : '#000000');
-        frameMat.emissiveIntensity = look.marble ? 0.12 : 0;
-        frameMat.metalness = look.marble ? 0.04 : Math.max(look.metal, 0.35);
-        frameMat.roughness = look.marble ? 0.38 : look.rough;
-        frameMat.envMapIntensity = look.marble ? 0.55 : 0.8;
-        glowMat.color.set(look.marble ? '#f8e6cc' : look.wall);
-        glowMat.emissive.set(look.marble ? '#e8c49a' : '#000000');
-        glowMat.emissiveIntensity = look.marble ? 0.32 : 0.15;
+        frameMat.color.set(look.marble ? '#c6a15b' : look.frame);
+        frameMat.emissive.set(look.marble ? '#5c4314' : '#000000');
+        frameMat.emissiveIntensity = look.marble ? 0.25 : 0;
+        frameMat.metalness = look.marble ? 0.55 : Math.max(look.metal, 0.35);
+        frameMat.roughness = look.marble ? 0.34 : look.rough;
+        frameMat.envMapIntensity = look.marble ? 1.35 : 0.8;
+        glassMat.color.set(look.marble ? '#fff6ea' : '#ffffff');
+        glassMat.opacity = look.marble ? 0.18 : 0.03;
+        glassMat.metalness = look.marble ? 0.12 : 0;
+        glassMat.roughness = look.marble ? 0.06 : 0.04;
+        glowMat.color.set(look.marble ? '#fff1dc' : look.wall);
+        glowMat.emissive.set(look.marble ? '#f0c48a' : '#000000');
+        glowMat.emissiveIntensity = look.marble ? 0.42 : 0.15;
         ledMat.color.set(look.marble ? '#fff6e2' : look.light);
         syncNicheFrames();
-    }, [slots, hover, selectedId, focusIndex, concept, frameMat, glowMat, ledMat]);
+    }, [slots, hover, selectedId, focusIndex, concept, frameMat, glassMat, glowMat, ledMat]);
 
     const syncNicheFrames = () => {
         const dim = new THREE.Color('#e4ddd4');
@@ -475,9 +479,9 @@ function UrnGrid({ slots, concept, shiftZ }) {
         bodyMat.metalness = look.marble ? 0.02 : look.urnMetal;
         bodyMat.roughness = look.marble ? 0.48 : look.urnRough;
         bodyMat.clearcoat = look.marble ? 0.12 : 0.45;
-        goldMat.color.set(look.marble ? '#cbb89a' : look.trim);
-        goldMat.metalness = look.marble ? 0.12 : 0.75;
-        goldMat.roughness = look.marble ? 0.55 : 0.22;
+        goldMat.color.set(look.marble ? '#e6c36a' : look.trim);
+        goldMat.metalness = look.marble ? 0.92 : 0.75;
+        goldMat.roughness = look.marble ? 0.2 : 0.22;
         const creams = ['#f7f1e4', '#efe2ce', '#f4ead8', '#e6d7c2', '#fbf6ee', '#e9dcc8'];
         const dummy = new THREE.Object3D();
         parts.forEach((part, index) => {
@@ -643,20 +647,20 @@ function Room({ concept }) {
         color: '#ffffff', roughness: 0.34, metalness: 0.02, clearcoat: 0.28, clearcoatRoughness: 0.3, envMapIntensity: 0.55,
     }), []);
     useLayoutEffect(() => {
-        floorMat.color.set(look.marble ? '#f6f6f4' : look.floor);
-        floorMat.map = look.marble ? null : null;
-        floorMat.roughness = look.marble ? 0.07 : Math.max(0.22, look.rough);
-        floorMat.metalness = look.marble ? 0.02 : look.metal * 0.25;
-        floorMat.clearcoat = look.marble ? 1 : 0.05;
-        floorMat.clearcoatRoughness = look.marble ? 0.08 : 0.4;
+        floorMat.color.set(look.marble ? '#f7f4ee' : look.floor);
+        floorMat.map = look.marble ? floorTex : null;
+        floorMat.roughness = look.marble ? 0.28 : Math.max(0.22, look.rough);
+        floorMat.metalness = look.marble ? 0.04 : look.metal * 0.25;
+        floorMat.clearcoat = look.marble ? 0.65 : 0.05;
+        floorMat.clearcoatRoughness = look.marble ? 0.18 : 0.4;
         floorMat.needsUpdate = true;
-        wallMat.color.set(look.marble ? '#fbfaf8' : look.wall);
-        wallMat.map = null;
+        wallMat.color.set(look.marble ? '#fbf7f1' : look.wall);
+        wallMat.map = look.marble ? wallTex : null;
         wallMat.emissive = wallMat.emissive || new THREE.Color();
-        wallMat.emissive.set(look.marble ? '#fffdf8' : '#000000');
-        wallMat.emissiveIntensity = look.marble ? 0.55 : 0;
-        wallMat.roughness = look.marble ? 0.72 : Math.min(0.92, look.rough + 0.08);
-        wallMat.clearcoat = 0;
+        wallMat.emissive.set(look.marble ? '#fffaf4' : '#000000');
+        wallMat.emissiveIntensity = look.marble ? 0.08 : 0;
+        wallMat.roughness = look.marble ? 0.46 : Math.min(0.92, look.rough + 0.08);
+        wallMat.clearcoat = look.marble ? 0.18 : 0;
         wallMat.needsUpdate = true;
     }, [look, floorMat, wallMat, floorTex, wallTex]);
 
@@ -665,17 +669,18 @@ function Room({ concept }) {
             ? h('mesh', { rotation: [-Math.PI / 2, 0, 0], position: [0, 0.002, -4.6], receiveShadow: true },
                 h('planeGeometry', { args: [7.2, 22] }),
                 h(MeshReflectorMaterial, {
+                    map: floorTex,
                     blur: [280, 80],
-                    resolution: 1024,
-                    mixBlur: 0.85,
-                    mixStrength: 1.6,
-                    roughness: 0.22,
+                    resolution: 512,
+                    mixBlur: 0.65,
+                    mixStrength: 0.85,
+                    roughness: 0.38,
                     depthScale: 1.05,
                     minDepthThreshold: 0.25,
                     maxDepthThreshold: 1.3,
-                    color: '#f4f4f2',
-                    metalness: 0.55,
-                    mirror: 0.85,
+                    color: '#f6f1e8',
+                    metalness: 0.12,
+                    mirror: 0.42,
                 })
             )
             : h('mesh', { rotation: [-Math.PI / 2, 0, 0], position: [0, 0, 0.15], receiveShadow: true, material: floorMat },
@@ -693,14 +698,27 @@ function Room({ concept }) {
         h('mesh', { position: [0, 2.05, look.marble ? -13.2 : -9.2], material: wallMat },
             h('boxGeometry', { args: [5.6, 4.15, 0.12] })
         ),
-        ...(look.marble ? [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => h('mesh', {
+        ...(look.marble ? [
+            h('mesh', { key: 'skylight', position: [0, 4.12, -4.6], rotation: [Math.PI / 2, 0, 0] },
+                h('planeGeometry', { args: [1.55, 14] }),
+                h('meshBasicMaterial', { color: '#fffaf2' })
+            ),
+            h('mesh', { key: 'gold-left', position: [-2.55, 0.05, -4.6] },
+                h('boxGeometry', { args: [0.04, 0.06, 18] }),
+                h('meshStandardMaterial', { color: '#d4af37', metalness: 0.88, roughness: 0.24 })
+            ),
+            h('mesh', { key: 'gold-right', position: [2.55, 0.05, -4.6] },
+                h('boxGeometry', { args: [0.04, 0.06, 18] }),
+                h('meshStandardMaterial', { color: '#d4af37', metalness: 0.88, roughness: 0.24 })
+            ),
+        ].concat([0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => h('mesh', {
             key: 'spot-' + i,
             position: [0, 4.135, 2.8 - i * 1.25],
             rotation: [Math.PI / 2, 0, 0],
         },
             h('circleGeometry', { args: [0.07, 24] }),
             h('meshBasicMaterial', { color: '#fffdf8' })
-        )) : [
+        ))) : [
             h('mesh', { key: 'sky', position: [0, 4.08, -2.2] },
                 h('boxGeometry', { args: [1.15, 0.04, 12] }),
                 h('meshStandardMaterial', { color: '#f7f6f3', emissive: '#fffaf4', emissiveIntensity: 0.15, roughness: 0.6 })
@@ -735,54 +753,154 @@ function poseFor(index, slots) {
     return { pos, target: slot.position.clone() };
 }
 
+function clampNum(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+}
+
 function GuidedCamera({ focusIndex }) {
     const { camera, gl } = useThree();
     const pos = useRef(new THREE.Vector3(0, 1.52, 4.35));
     const target = useRef(new THREE.Vector3(0, 1.05, -6.5));
     const velP = useRef(new THREE.Vector3());
     const velT = useRef(new THREE.Vector3());
+    const look = useRef({
+        yaw: 0, pitch: 0, dolly: 0,
+        vy: 0, vp: 0, vd: 0,
+        gazeY: 0, gazeP: 0, wantY: 0, wantP: 0,
+    });
+    const drag = useRef({ on: false, lx: 0, ly: 0, moved: 0 });
+    const seenFocus = useRef(focusIndex);
+    const tmp = useRef({
+        dir: new THREE.Vector3(),
+        right: new THREE.Vector3(),
+        eye: new THREE.Vector3(),
+        aim: new THREE.Vector3(),
+        up: new THREE.Vector3(0, 1, 0),
+        qYaw: new THREE.Quaternion(),
+        qPitch: new THREE.Quaternion(),
+    });
 
     useEffect(() => {
         const el = gl.domElement;
-        let startX = 0;
-        let startY = 0;
-        let tracking = false;
+        el.style.cursor = 'grab';
+        el.style.touchAction = 'none';
+        const L = look.current;
+        const D = drag.current;
         const down = (event) => {
             if (event.button != null && event.button !== 0) return;
-            tracking = true;
-            startX = event.clientX;
-            startY = event.clientY;
+            D.on = true;
+            D.lx = event.clientX;
+            D.ly = event.clientY;
+            D.moved = 0;
+            el.style.cursor = 'grabbing';
+            if (el.setPointerCapture) el.setPointerCapture(event.pointerId);
         };
-        const up = (event) => {
-            if (!tracking) return;
-            tracking = false;
-            const dx = event.clientX - startX;
-            const dy = event.clientY - startY;
-            if (Math.abs(dx) < 56 || Math.abs(dx) < Math.abs(dy) * 1.25) return;
-            bus.suppressClick = true;
-            const count = bus.slots.length;
-            if (!count || !bus.focusTo) return;
-            const dir = dx < 0 ? 1 : -1;
-            const current = bus.focusIndex;
-            const next = current < 0 ? (dir > 0 ? 0 : count - 1) : (current + dir + count) % count;
-            bus.focusTo(next);
-            window.setTimeout(() => { bus.suppressClick = false; }, 320);
+        const move = (event) => {
+            if (D.on) {
+                const dx = event.clientX - D.lx;
+                const dy = event.clientY - D.ly;
+                D.lx = event.clientX;
+                D.ly = event.clientY;
+                const speed = Math.hypot(dx, dy);
+                D.moved += speed;
+                const sens = 0.0022 * (0.72 + Math.min(speed, 64) / 42);
+                L.yaw -= dx * sens;
+                L.pitch -= dy * sens * 0.62;
+                L.vy -= dx * sens * 0.42;
+                L.vp -= dy * sens * 0.26;
+                if (D.moved > 8) bus.suppressClick = true;
+                return;
+            }
+            const rect = el.getBoundingClientRect();
+            if (!rect.width || !rect.height) return;
+            L.wantY = (event.clientX - rect.left) / rect.width - 0.5;
+            L.wantP = (event.clientY - rect.top) / rect.height - 0.5;
+        };
+        const up = () => {
+            if (!D.on) return;
+            D.on = false;
+            el.style.cursor = 'grab';
+            window.setTimeout(() => { bus.suppressClick = false; }, 90);
+        };
+        const wheel = (event) => {
+            event.preventDefault();
+            const span = Math.min(Math.abs(event.deltaY), 160);
+            const sens = 0.00115 * (0.75 + span / 200);
+            L.vd += Math.sign(event.deltaY) * span * sens;
+        };
+        const leave = () => {
+            L.wantY = 0;
+            L.wantP = 0;
         };
         el.addEventListener('pointerdown', down);
-        el.addEventListener('pointerup', up, true);
+        el.addEventListener('pointermove', move);
+        el.addEventListener('pointerup', up);
+        el.addEventListener('pointercancel', up);
+        el.addEventListener('pointerleave', leave);
+        el.addEventListener('wheel', wheel, { passive: false });
         return () => {
             el.removeEventListener('pointerdown', down);
-            el.removeEventListener('pointerup', up, true);
+            el.removeEventListener('pointermove', move);
+            el.removeEventListener('pointerup', up);
+            el.removeEventListener('pointercancel', up);
+            el.removeEventListener('pointerleave', leave);
+            el.removeEventListener('wheel', wheel);
         };
     }, [gl]);
 
     useFrame((_, rawDt) => {
         const dt = Math.min(rawDt || 0.016, 0.033);
+        const L = look.current;
+        const D = drag.current;
+        if (seenFocus.current !== focusIndex) {
+            seenFocus.current = focusIndex;
+            L.yaw = 0;
+            L.pitch = 0;
+            L.dolly = 0;
+            L.vy = 0;
+            L.vp = 0;
+            L.vd = 0;
+        }
+        L.yaw += L.vy;
+        L.pitch += L.vp;
+        L.dolly += L.vd;
+        const coast = D.on ? 0.55 : 0.9;
+        L.vy *= coast;
+        L.vp *= coast;
+        L.vd *= 0.84;
+        if (!D.on) {
+            L.gazeY += (L.wantY - L.gazeY) * 0.08;
+            L.gazeP += (L.wantP - L.gazeP) * 0.08;
+        }
+        L.yaw = clampNum(L.yaw, -0.9, 0.9);
+        L.pitch = clampNum(L.pitch, -0.4, 0.36);
+        L.dolly = clampNum(L.dolly, -2.4, 3.1);
+
         const pose = poseFor(focusIndex, bus.slots);
         springToward(pos.current, velP.current, pose.pos, dt, 78, 16);
         springToward(target.current, velT.current, pose.target, dt, 78, 16);
-        camera.position.copy(pos.current);
-        camera.lookAt(target.current);
+
+        const t = tmp.current;
+        t.dir.copy(target.current).sub(pos.current);
+        const dist = Math.max(t.dir.length(), 0.4);
+        t.dir.multiplyScalar(1 / dist);
+        const yaw = L.yaw + (D.on ? 0 : L.gazeY * 0.28);
+        const pitch = L.pitch + (D.on ? 0 : L.gazeP * 0.16);
+        t.qYaw.setFromAxisAngle(t.up, yaw);
+        t.dir.applyQuaternion(t.qYaw);
+        t.right.crossVectors(t.dir, t.up);
+        if (t.right.lengthSq() < 1e-6) t.right.set(1, 0, 0);
+        t.right.normalize();
+        t.qPitch.setFromAxisAngle(t.right, pitch);
+        t.dir.applyQuaternion(t.qPitch);
+        t.eye.copy(pos.current).addScaledVector(t.dir, L.dolly);
+        t.eye.x = clampNum(t.eye.x, -1.45, 1.45);
+        t.eye.y = clampNum(t.eye.y, 0.95, 2.25);
+        t.eye.z = clampNum(t.eye.z, -7.2, 5.4);
+        t.aim.copy(t.eye).addScaledVector(t.dir, dist);
+        camera.position.copy(t.eye);
+        camera.lookAt(t.aim);
+
         const goal = bus.pressed ? 0.9 : (focusIndex >= 0 ? 1.06 : 1);
         const force = (goal - bus.nicheScale) * 280;
         bus.nicheVel += (force - bus.nicheVel * 24) * dt;
@@ -806,50 +924,91 @@ class ModelBoundary extends React.Component {
     }
 }
 
+function makePedestalPlaque() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 640;
+    canvas.height = 220;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#f7f1e6';
+    ctx.fillRect(0, 0, 640, 220);
+    ctx.strokeStyle = '#d4af37';
+    ctx.lineWidth = 10;
+    ctx.strokeRect(12, 12, 616, 196);
+    ctx.fillStyle = '#2a261f';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '600 54px "Malgun Gothic", "Noto Sans KR", sans-serif';
+    ctx.fillText('세종 이루소 봉안당', 320, 110);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 8;
+    return tex;
+}
+
+function FlowerBunch() {
+    const blooms = ['#fffaf4', '#f3e2c4', '#e8d7a8', '#f7f1e6', '#fffdf8', '#ead8b0'];
+    return h('group', { position: [0, 0.86, 0.34] },
+        h('mesh', { position: [0, -0.08, 0] },
+            h('cylinderGeometry', { args: [0.012, 0.016, 0.16, 6] }),
+            h('meshStandardMaterial', { color: '#6d7a52', roughness: 0.7 })
+        ),
+        blooms.map((color, i) => {
+            const angle = (i / blooms.length) * Math.PI * 2;
+            return h('mesh', {
+                key: 'bloom-' + i,
+                position: [Math.cos(angle) * 0.09, 0.02 + (i % 2) * 0.03, Math.sin(angle) * 0.05],
+            },
+                h('sphereGeometry', { args: [0.045, 10, 8] }),
+                h('meshStandardMaterial', { color, roughness: 0.55 })
+            );
+        })
+    );
+}
+
 function HeroCase() {
-    const gltf = useGLTF(URN_URL, DRACO_DECODER);
-    const screen = useMemo(() => makeKioskTexture(), []);
-    const label = useMemo(() => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 512;
-        canvas.height = 96;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#fbfaf7';
-        ctx.fillRect(0, 0, 512, 96);
-        ctx.fillStyle = '#2a2e33';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.font = '600 40px "Malgun Gothic", "Noto Sans KR", sans-serif';
-        ctx.fillText('세종 이루소 봉안당', 256, 48);
-        const tex = new THREE.CanvasTexture(canvas);
-        tex.colorSpace = THREE.SRGBColorSpace;
-        return tex;
-    }, []);
-    const urn = useMemo(() => {
-        const copy = gltf.scene.clone(true);
-        copy.traverse((obj) => {
-            if (obj.isMesh) obj.raycast = () => null;
-        });
-        return copy;
-    }, [gltf]);
-    return h('group', { position: [0, 0, -1.15] },
-        h('mesh', { position: [0, 1.12, 0], castShadow: true, receiveShadow: true },
-            h('boxGeometry', { args: [0.62, 2.24, 0.36] }),
-            h('meshStandardMaterial', { color: '#fbfaf7', roughness: 0.46, metalness: 0.03 })
+    const plaque = useMemo(() => makePedestalPlaque(), []);
+    const gold = useMemo(() => new THREE.MeshStandardMaterial({
+        color: '#e8c872', emissive: '#6b5018', emissiveIntensity: 0.35, metalness: 0.45, roughness: 0.38,
+    }), []);
+    const stone = useMemo(() => new THREE.MeshStandardMaterial({
+        color: '#f7f4ee', roughness: 0.42, metalness: 0.04,
+    }), []);
+    const rails = [
+        [0, 1.48, 0.2, 0.52, 0.02, 0.02],
+        [0, 0.96, 0.2, 0.52, 0.02, 0.02],
+        [-0.25, 1.22, 0.2, 0.02, 0.52, 0.02],
+        [0.25, 1.22, 0.2, 0.02, 0.52, 0.02],
+    ];
+    return h('group', { position: [0, 0, -1.35] },
+        h('mesh', { position: [0, 0.34, 0], castShadow: true, receiveShadow: true, material: stone },
+            h('boxGeometry', { args: [0.78, 0.68, 0.62] })
         ),
-        h('mesh', { position: [0, 1.28, 0.168] },
-            h('boxGeometry', { args: [0.46, 0.78, 0.02] }),
-            h('meshBasicMaterial', { color: '#121820' })
+        h('mesh', { position: [0, 0.7, 0], material: gold },
+            h('boxGeometry', { args: [0.84, 0.035, 0.68] })
         ),
-        h('mesh', { position: [0, 1.28, 0.182] },
-            h('planeGeometry', { args: [0.42, 0.72] }),
-            h('meshBasicMaterial', { map: screen })
+        rails.map((rail, i) => h('mesh', {
+            key: 'rail-' + i,
+            position: [rail[0], rail[1], rail[2]],
+            material: gold,
+        }, h('boxGeometry', { args: [rail[3], rail[4], rail[5]] }))),
+        h('mesh', { position: [0, 1.18, 0.1] },
+            h('boxGeometry', { args: [0.4, 0.42, 0.06] }),
+            h('meshBasicMaterial', { color: '#fff8f0' })
         ),
-        h('mesh', { position: [0, 2.08, 0.185] },
-            h('planeGeometry', { args: [0.5, 0.09] }),
-            h('meshBasicMaterial', { map: label })
+        h('mesh', { position: [0, 1.16, 0.18] },
+            h('sphereGeometry', { args: [0.12, 24, 16] }),
+            h('meshBasicMaterial', { color: '#fffaf4' })
         ),
-        h('primitive', { object: urn, position: [0, -2, 0], scale: 0.001 })
+        h('mesh', { position: [0, 1.3, 0.18] },
+            h('sphereGeometry', { args: [0.06, 18, 12] }),
+            h('meshBasicMaterial', { color: '#fffaf4' })
+        ),
+        h('pointLight', { position: [0, 1.28, 0.2], color: '#fff1dc', intensity: 0.35, distance: 1.4, decay: 2 }),
+        h('mesh', { position: [0, 0.52, 0.32] },
+            h('planeGeometry', { args: [0.46, 0.16] }),
+            h('meshBasicMaterial', { map: plaque })
+        ),
+        h(FlowerBunch)
     );
 }
 
