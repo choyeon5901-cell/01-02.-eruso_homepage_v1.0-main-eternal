@@ -1,16 +1,17 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Html, MeshReflectorMaterial, Text, useGLTF } from '@react-three/drei';
+import { Html, MeshReflectorMaterial, Text } from '@react-three/drei';
+import { Bloom, EffectComposer, SMAA } from '@react-three/postprocessing';
+import { SMAAPreset } from 'postprocessing';
 import * as THREE from 'three';
 
-const DRACO_DECODER = 'https://www.gstatic.com/draco/versioned/decoders/1.5.7/';
-const URN_URL = 'templates/columbarium/1/models/urn.glb?v=ceramic2';
 const KIOSK_FONT = 'https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-kr@5.2.8/korean-700-normal.ttf';
 const h = React.createElement;
 
 const CELL_W = 0.76;
 const CELL_H = 0.64;
+const SHELF_Y = -CELL_H * 0.88 / 2 + 0.008;
 const GAP = 0.045;
 const PRESETS = {
     all: { pos: [0, 1.52, 3.05], target: [0, 1.32, -0.15] },
@@ -59,8 +60,6 @@ const bus = {
     ceilingOn: true,
     setCeilingOn: null,
 };
-
-useGLTF.preload(URN_URL, DRACO_DECODER);
 
 function roomLabel(cell, r, c) {
     const row = String((cell && cell.row) || r + 1).padStart(2, '0');
@@ -176,42 +175,89 @@ function slotsFromPayload(payload, zone, floor) {
     return buildSlots({ cells, zone, floor, rows: 6, cols: 10 });
 }
 
+function floorFromRow(r) {
+    if (r <= 1) return '1';
+    if (r <= 3) return '2';
+    return '3';
+}
+
 function useHallFloors(snap) {
-    const zone = (snap && snap.zone) || 'A';
-    const floor = String((snap && snap.floor) || '1');
+    const facilityKey = (snap && snap.facility && snap.facility.id) || 'sejong-columbarium';
     const [packs, setPacks] = useState(() => ({
-        1: buildSlots(snap && String(snap.floor) === '1' ? snap : null),
-        2: buildSlots(snap && String(snap.floor) === '2' ? snap : null),
-        3: buildSlots(snap && String(snap.floor) === '3' ? snap : null),
+        A: buildSlots(null),
+        B: buildSlots(null),
+        C: buildSlots(null),
     }));
     useEffect(() => {
         let cancel = false;
         const base = resolveApiBase();
-        const facilityKey = (snap && snap.facility && snap.facility.id) || 'sejong-columbarium';
         const filterName = facilityKey === 'sejong-columbarium'
             ? '세종봉안당'
             : ((snap && snap.facility && snap.facility.name) || '세종봉안당');
-        Promise.all(['1', '2', '3'].map((level) => fetch(
-            base + '/api/memorial-rooms/columbarium-layout?zone='
-            + encodeURIComponent(zone) + '&floor=' + level + '&cols=10&rows=6&facility_key='
-            + encodeURIComponent(facilityKey) + '&facility_name=' + encodeURIComponent(filterName)
-        ).then((res) => {
-            if (!res.ok) throw new Error(String(res.status));
-            return res.json();
-        }).then((payload) => [level, slotsFromPayload(payload, zone, level)]))).then((pairs) => {
+        const zones = ['A', 'B', 'C'];
+        const jobs = [];
+        zones.forEach((zone) => {
+            ['1', '2', '3'].forEach((level) => {
+                jobs.push(fetch(
+                    base + '/api/memorial-rooms/columbarium-layout?zone='
+                    + encodeURIComponent(zone) + '&floor=' + level + '&cols=10&rows=6&facility_key='
+                    + encodeURIComponent(facilityKey) + '&facility_name=' + encodeURIComponent(filterName)
+                ).then((res) => {
+                    if (!res.ok) throw new Error(String(res.status));
+                    return res.json();
+                }).then((payload) => ({ zone, level, slots: slotsFromPayload(payload, zone, level) })));
+            });
+        });
+        Promise.all(jobs).then((rows) => {
             if (cancel) return;
-            const next = { 1: [], 2: [], 3: [] };
-            pairs.forEach(([level, slots]) => { next[level] = slots; });
+            const buckets = { A: {}, B: {}, C: {} };
+            rows.forEach(({ zone, slots }) => {
+                slots.forEach((slot) => {
+                    const key = slot.r + '-' + slot.c;
+                    const want = floorFromRow(slot.r);
+                    const prev = buckets[zone][key];
+                    const score = (item) => {
+                        if (!item || !item.occupied) return 0;
+                        let n = 2;
+                        if (item.cell && item.cell.image_url) n += 4;
+                        if (item.cell && String(item.cell.floor) === want) n += 1;
+                        return n;
+                    };
+                    if (!prev || score(slot) > score(prev)) buckets[zone][key] = slot;
+                });
+            });
+            const next = {};
+            let occupied = 0;
+            let total = 0;
+            zones.forEach((zone) => {
+                next[zone] = buildSlots(null).map((slot) => {
+                    const found = buckets[zone][slot.r + '-' + slot.c];
+                    const floor = floorFromRow(slot.r);
+                    const row = slot.r + 1;
+                    const col = slot.c + 1;
+                    const code = zone + floor + '-' + String(row).padStart(2, '0') + String(col).padStart(2, '0');
+                    total += 1;
+                    if (!found || !found.cell) {
+                        return Object.assign({}, slot, {
+                            id: code,
+                            occupied: false,
+                            isPublic: false,
+                            cell: { zone, floor, row, col, occupied: false, id: code },
+                        });
+                    }
+                    if (found.occupied) occupied += 1;
+                    const cell = Object.assign({}, found.cell, { zone, floor, row, col, id: code });
+                    return Object.assign({}, found, { id: code, cell });
+                });
+            });
             setPacks(next);
-            const shown = next[floor] || [];
-            const occupied = shown.filter((slot) => slot.occupied).length;
             const seats = document.querySelector('#columbarium-template-root [data-seat-count]');
-            if (seats && shown.length) {
-                seats.textContent = '총 ' + shown.length + '석 중 안치 ' + occupied + '석 · 분양 가능 ' + (shown.length - occupied) + '석';
+            if (seats && total) {
+                seats.textContent = 'A·B·C동 ' + total + '석 중 안치 ' + occupied + '석 · 분양 가능 ' + (total - occupied) + '석';
             }
         }).catch(() => {});
         return () => { cancel = true; };
-    }, [zone, floor]);
+    }, [facilityKey]);
     return packs;
 }
 
@@ -286,7 +332,7 @@ function PortraitPlate({ slot }) {
     useLayoutEffect(() => {
         if (!mesh.current) return;
         const dummy = new THREE.Object3D();
-        placeLocal(dummy, slot, [0.1, 0.02, 0.16], 1);
+        placeLocal(dummy, slot, [0.16, SHELF_Y + 0.102, 0.15], 1);
         mesh.current.position.copy(dummy.position);
         mesh.current.quaternion.copy(dummy.quaternion);
     }, [slot]);
@@ -494,7 +540,7 @@ function NicheGrid({ slots, hover, selectedId, focusIndex, onHover, onSelect, co
 
     useLayoutEffect(() => {
         const look = concept || CONCEPTS[0];
-        frameMat.color.set(look.marble ? '#f4f1ec' : look.frame);
+        frameMat.color.set(look.marble ? '#ffffff' : look.frame);
         frameMat.emissive.set('#000000');
         frameMat.emissiveIntensity = 0;
         frameMat.metalness = look.marble ? 0.04 : Math.max(look.metal, 0.35);
@@ -503,21 +549,21 @@ function NicheGrid({ slots, hover, selectedId, focusIndex, onHover, onSelect, co
         frameMat.clearcoatRoughness = look.marble ? 0.22 : 0.4;
         frameMat.envMapIntensity = look.marble ? 0.9 : 0.8;
         glassMat.color.set(look.marble ? '#eef4f8' : '#ffffff');
-        glassMat.opacity = look.marble ? 0.24 : 0.08;
-        glassMat.metalness = look.marble ? 0.08 : 0;
-        glassMat.roughness = 0.02;
-        glassMat.envMapIntensity = look.marble ? 1.45 : 0.45;
-        glowMat.color.set(look.marble ? '#fff1dc' : look.wall);
-        glowMat.emissive.set(look.marble ? '#ffc98a' : '#000000');
-        glowMat.emissiveIntensity = look.marble ? 0.55 : 0.15;
+        glassMat.opacity = look.marble ? 0.18 : 0.08;
+        glassMat.metalness = look.marble ? 0.02 : 0;
+        glassMat.roughness = look.marble ? 0.28 : 0.12;
+        glassMat.envMapIntensity = look.marble ? 0.35 : 0.2;
+        glowMat.color.set(look.marble ? '#e4c49a' : look.wall);
+        glowMat.emissive.set(look.marble ? '#c48448' : '#000000');
+        glowMat.emissiveIntensity = look.marble ? 0.28 : 0.15;
         glowMat.roughness = look.marble ? 0.9 : 0.72;
         ledMat.color.set(look.marble ? '#fff6e2' : look.light);
         syncNicheFrames();
     }, [slots, hover, selectedId, focusIndex, concept, frameMat, glassMat, glowMat, ledMat]);
 
     const syncNicheFrames = () => {
-        const dim = new THREE.Color('#e4ddd4');
-        const base = new THREE.Color('#ffffff');
+        const dim = new THREE.Color('#b7aea2');
+        const base = new THREE.Color('#cfc4b4');
         const hot = new THREE.Color('#fff4cc');
         const focused = focusIndex >= 0;
         writeInstances(frame.current, slots, hover, selectedId, (slot, on, i) => {
@@ -601,93 +647,128 @@ function NicheGrid({ slots, hover, selectedId, focusIndex, onHover, onSelect, co
     );
 }
 
-function makeCeramicTexture() {
+function makeGlazeMap() {
     const canvas = document.createElement('canvas');
-    canvas.width = 512;
+    canvas.width = 256;
     canvas.height = 512;
     const ctx = canvas.getContext('2d');
-    const wash = ctx.createLinearGradient(0, 0, 512, 0);
-    wash.addColorStop(0, '#efe6d8');
-    wash.addColorStop(0.45, '#fffaf3');
-    wash.addColorStop(1, '#e6dccb');
+    const wash = ctx.createLinearGradient(0, 0, 256, 0);
+    wash.addColorStop(0, '#f4ece3');
+    wash.addColorStop(0.32, '#fffdf8');
+    wash.addColorStop(0.58, '#fffdf8');
+    wash.addColorStop(1, '#efe4d6');
     ctx.fillStyle = wash;
-    ctx.fillRect(0, 0, 512, 512);
-    ctx.strokeStyle = 'rgba(70, 54, 40, 0.28)';
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    for (let col = 0; col < 4; col += 1) {
-        const x = 86 + col * 96;
-        let y = 150;
-        ctx.lineWidth = 2.2;
-        for (let stroke = 0; stroke < 6; stroke += 1) {
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.quadraticCurveTo(x + 14, y + 18, x - 6, y + 34);
-            ctx.stroke();
-            y += 42;
-        }
-    }
+    ctx.fillRect(0, 0, 256, 512);
+    const band = ctx.createLinearGradient(0, 0, 256, 0);
+    band.addColorStop(0.28, 'rgba(255,255,255,0)');
+    band.addColorStop(0.4, 'rgba(255,255,255,0.7)');
+    band.addColorStop(0.48, 'rgba(255,255,255,0)');
+    ctx.fillStyle = band;
+    ctx.fillRect(0, 0, 256, 512);
     const tex = new THREE.CanvasTexture(canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
-    tex.wrapS = THREE.ClampToEdgeWrapping;
-    tex.wrapT = THREE.ClampToEdgeWrapping;
+    tex.wrapS = THREE.RepeatWrapping;
     tex.anisotropy = 8;
     return tex;
 }
 
-function UrnModel({ slot, source, bodyMat, goldMat }) {
+function makeUrnGeometries() {
+    const pts = [
+        [0.002, 0],
+        [0.044, 0],
+        [0.056, 0.007],
+        [0.062, 0.016],
+        [0.074, 0.032],
+        [0.098, 0.058],
+        [0.116, 0.092],
+        [0.118, 0.116],
+        [0.110, 0.142],
+        [0.092, 0.166],
+        [0.074, 0.186],
+        [0.064, 0.200],
+        [0.074, 0.212],
+        [0.078, 0.220],
+        [0.062, 0.240],
+        [0.040, 0.260],
+        [0.018, 0.278],
+        [0.008, 0.290],
+        [0.002, 0.300],
+    ].map(([x, y]) => new THREE.Vector2(x, y));
+    const body = new THREE.LatheGeometry(pts, 72);
+    body.computeVertexNormals();
+    const bands = [
+        { y: 0.116, r: 0.118, tube: 0.004 },
+        { y: 0.186, r: 0.074, tube: 0.0034 },
+        { y: 0.214, r: 0.076, tube: 0.0032 },
+    ].map((band) => {
+        const geo = new THREE.TorusGeometry(band.r, band.tube, 12, 72);
+        geo.rotateX(Math.PI / 2);
+        geo.translate(0, band.y, 0);
+        return geo;
+    });
+    return { body, bands };
+}
+
+function UrnModel({ slot, geo, bodyMat, goldMat }) {
     const root = useMemo(() => {
-        const obj = source.clone(true);
-        obj.traverse((child) => {
-            if (!child.isMesh) return;
-            const label = (child.name || '') + ' ' + ((child.material && child.material.name) || '');
-            child.material = /trim|gold/i.test(label) ? goldMat : bodyMat;
-            child.castShadow = true;
-            child.frustumCulled = false;
+        const group = new THREE.Group();
+        const body = new THREE.Mesh(geo.body, bodyMat);
+        body.castShadow = true;
+        body.receiveShadow = true;
+        group.add(body);
+        geo.bands.forEach((band) => {
+            const ring = new THREE.Mesh(band, goldMat);
+            ring.castShadow = true;
+            group.add(ring);
         });
-        return obj;
-    }, [source, bodyMat, goldMat]);
+        return group;
+    }, [geo, bodyMat, goldMat]);
     useLayoutEffect(() => {
         const dummy = new THREE.Object3D();
-        placeLocal(dummy, slot, [-0.08, -0.17, 0.05], 1);
+        placeLocal(dummy, slot, [-0.13, SHELF_Y, 0.03], 1);
         root.position.copy(dummy.position);
         root.quaternion.copy(dummy.quaternion);
-        root.scale.setScalar(0.45);
+        root.scale.setScalar(1);
         root.visible = true;
     }, [slot, root]);
     return h('primitive', { object: root });
 }
 
 function UrnGrid({ slots, concept, shiftZ }) {
-    const gltf = useGLTF(URN_URL, DRACO_DECODER);
-    const ceramicMap = useMemo(() => makeCeramicTexture(), []);
+    const geo = useMemo(() => makeUrnGeometries(), []);
+    const glazeMap = useMemo(() => makeGlazeMap(), []);
     const bodyMat = useMemo(() => new THREE.MeshPhysicalMaterial({
-        color: '#f4ead8', map: ceramicMap, roughness: 0.08, metalness: 0.02, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1.8, sheen: 0.35, sheenRoughness: 0.25, sheenColor: new THREE.Color('#fff4e4'),
-    }), [ceramicMap]);
+        color: '#fffdf8', map: glazeMap, roughness: 0.2, metalness: 0, clearcoat: 0.62, clearcoatRoughness: 0.12,
+        envMapIntensity: 0.35, sheen: 0.35, sheenRoughness: 0.28, sheenColor: new THREE.Color('#fffdf8'),
+        emissive: '#fff6ea', emissiveIntensity: 0.18,
+    }), [glazeMap]);
     const goldMat = useMemo(() => new THREE.MeshPhysicalMaterial({
-        color: '#c9b48a', roughness: 0.22, metalness: 0.82, clearcoat: 0.4, clearcoatRoughness: 0.18, envMapIntensity: 1.7,
+        color: '#e4c57a', roughness: 0.32, metalness: 0.4, clearcoat: 0.16, clearcoatRoughness: 0.28,
+        envMapIntensity: 0.28, emissive: '#a87828', emissiveIntensity: 0.22,
     }), []);
     useLayoutEffect(() => {
         const look = concept || CONCEPTS[0];
-        bodyMat.color.set(look.marble ? '#f4ead8' : look.urn);
-        bodyMat.emissive.set(look.marble ? '#fff3e0' : '#fffaf6');
-        bodyMat.emissiveIntensity = look.marble ? 0.04 : 0.04;
-        bodyMat.metalness = look.marble ? 0.02 : look.urnMetal;
-        bodyMat.roughness = look.marble ? 0.08 : look.urnRough;
-        bodyMat.clearcoat = look.marble ? 1 : 0.45;
-        bodyMat.clearcoatRoughness = look.marble ? 0.05 : 0.35;
-        bodyMat.envMapIntensity = look.marble ? 1.8 : 0.7;
-        goldMat.color.set(look.marble ? '#c9b48a' : look.trim);
-        goldMat.metalness = look.marble ? 0.82 : 0.75;
-        goldMat.roughness = 0.22;
-        goldMat.envMapIntensity = look.marble ? 1.7 : 1.5;
+        bodyMat.color.set(look.marble ? '#fffdf8' : look.urn);
+        bodyMat.emissive.set(look.marble ? '#fff6ea' : '#fffaf6');
+        bodyMat.emissiveIntensity = look.marble ? 0.18 : 0.04;
+        bodyMat.metalness = look.marble ? 0 : look.urnMetal;
+        bodyMat.roughness = look.marble ? 0.2 : look.urnRough;
+        bodyMat.clearcoat = look.marble ? 0.62 : 0.2;
+        bodyMat.clearcoatRoughness = look.marble ? 0.12 : 0.4;
+        bodyMat.envMapIntensity = look.marble ? 0.35 : 0.35;
+        goldMat.color.set(look.marble ? '#e4c57a' : look.trim);
+        goldMat.metalness = look.marble ? 0.4 : 0.5;
+        goldMat.roughness = look.marble ? 0.32 : 0.4;
+        goldMat.emissive.set(look.marble ? '#a87828' : '#000000');
+        goldMat.emissiveIntensity = look.marble ? 0.22 : 0.02;
+        goldMat.envMapIntensity = look.marble ? 0.28 : 0.4;
     }, [concept, bodyMat, goldMat]);
     const list = (slots || []).filter((slot) => hasPhoto(slot));
     if (!list.length) return null;
     return h('group', { position: [0, 0, shiftZ || 0] }, list.map((slot) => h(UrnModel, {
         key: slot.id + '-' + slot.r + '-' + slot.c,
         slot,
-        source: gltf.scene,
+        geo,
         bodyMat,
         goldMat,
     })));
@@ -777,15 +858,15 @@ function makeMarbleTexture() {
     canvas.width = size;
     canvas.height = size;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#f4f1eb';
+    ctx.fillStyle = '#e4d5c4';
     ctx.fillRect(0, 0, size, size);
     for (let i = 0; i < 70; i += 1) {
         const x = Math.random() * size;
         const y = Math.random() * size;
         const radius = 70 + Math.random() * 180;
         const g = ctx.createRadialGradient(x, y, 0, x, y, radius);
-        g.addColorStop(0, 'rgba(214, 206, 196, 0.28)');
-        g.addColorStop(1, 'rgba(244, 241, 235, 0)');
+        g.addColorStop(0, 'rgba(120, 98, 74, 0.42)');
+        g.addColorStop(1, 'rgba(228, 213, 196, 0)');
         ctx.fillStyle = g;
         ctx.beginPath();
         ctx.arc(x, y, radius, 0, Math.PI * 2);
@@ -793,9 +874,9 @@ function makeMarbleTexture() {
     }
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    for (let v = 0; v < 9; v += 1) {
-        ctx.strokeStyle = 'rgba(176, 168, 156, ' + (0.18 + Math.random() * 0.16) + ')';
-        ctx.lineWidth = 0.8 + Math.random() * 1.4;
+    for (let v = 0; v < 16; v += 1) {
+        ctx.strokeStyle = 'rgba(92, 72, 52, ' + (0.38 + Math.random() * 0.28) + ')';
+        ctx.lineWidth = 1.6 + Math.random() * 2.2;
         ctx.beginPath();
         let x = Math.random() * size;
         let y = -20;
@@ -867,11 +948,11 @@ function Room({ concept, ceilingOn }) {
         floorMat.clearcoat = look.marble ? 0.65 : 0.05;
         floorMat.clearcoatRoughness = look.marble ? 0.18 : 0.4;
         floorMat.needsUpdate = true;
-        wallMat.color.set(look.marble ? '#fbf7f1' : look.wall);
+        wallMat.color.set(look.marble ? '#f3ece4' : look.wall);
         wallMat.map = look.marble ? wallTex : null;
         wallMat.emissive = wallMat.emissive || new THREE.Color();
-        wallMat.emissive.set(look.marble ? '#fffaf4' : '#000000');
-        wallMat.emissiveIntensity = look.marble ? 0.02 : 0;
+        wallMat.emissive.set('#000000');
+        wallMat.emissiveIntensity = 0;
         wallMat.roughnessMap = look.marble ? plaster : null;
         wallMat.roughness = look.marble ? 0.72 : Math.min(0.92, look.rough + 0.08);
         wallMat.clearcoat = look.marble ? 0.08 : 0;
@@ -883,17 +964,18 @@ function Room({ concept, ceilingOn }) {
             ? h('mesh', { rotation: [-Math.PI / 2, 0, 0], position: [0, 0.002, -4.6], receiveShadow: true },
                 h('planeGeometry', { args: [7.2, 22] }),
                 h(MeshReflectorMaterial, {
-                    blur: [80, 20],
+                    blur: [360, 140],
                     resolution: 512,
-                    mixBlur: 0.06,
-                    mixStrength: 1.7,
-                    roughness: 0.035,
-                    depthScale: 1.15,
-                    minDepthThreshold: 0.15,
-                    maxDepthThreshold: 1.3,
-                    color: '#f3f1ee',
-                    metalness: 0.04,
-                    mirror: 0.96,
+                    mixBlur: 1,
+                    mixStrength: 0.22,
+                    mixContrast: 0.4,
+                    roughness: 0.72,
+                    depthScale: 0.08,
+                    minDepthThreshold: 0.45,
+                    maxDepthThreshold: 1.05,
+                    color: '#e4d6c6',
+                    metalness: 0.02,
+                    mirror: 0.16,
                 })
             )
             : h('mesh', { rotation: [-Math.PI / 2, 0, 0], position: [0, 0, 0.15], receiveShadow: true, material: floorMat },
@@ -914,15 +996,22 @@ function Room({ concept, ceilingOn }) {
         ...(look.marble ? [
             h('mesh', { key: 'skylight', position: [0, 4.11, -4.6], rotation: [Math.PI / 2, 0, 0] },
                 h('planeGeometry', { args: [0.78, 12] }),
-                h('meshBasicMaterial', { color: ledOn ? '#c5e4ff' : '#1c1b19', toneMapped: false })
+                h('meshStandardMaterial', {
+                    color: ledOn ? '#07131f' : '#1c1b19',
+                    emissive: ledOn ? '#c5e4ff' : '#000000',
+                    emissiveIntensity: ledOn ? 4.4 : 0,
+                    toneMapped: false,
+                    roughness: 1,
+                    metalness: 0,
+                })
             ),
             h('mesh', { key: 'gold-left', position: [-2.55, 0.05, -4.6] },
                 h('boxGeometry', { args: [0.04, 0.06, 18] }),
-                h('meshStandardMaterial', { color: '#f7f4ef', roughness: 0.7, metalness: 0.02 })
+                h('meshStandardMaterial', { color: '#c4b29c', roughness: 0.55, metalness: 0.08 })
             ),
             h('mesh', { key: 'gold-right', position: [2.55, 0.05, -4.6] },
                 h('boxGeometry', { args: [0.04, 0.06, 18] }),
-                h('meshStandardMaterial', { color: '#f7f4ef', roughness: 0.7, metalness: 0.02 })
+                h('meshStandardMaterial', { color: '#c4b29c', roughness: 0.55, metalness: 0.08 })
             ),
         ].concat([0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => h('mesh', {
             key: 'spot-' + i,
@@ -930,15 +1019,24 @@ function Room({ concept, ceilingOn }) {
             rotation: [Math.PI / 2, 0, 0],
         },
             h('circleGeometry', { args: [0.07, 24] }),
-            h('meshBasicMaterial', { color: ledOn ? '#eef7ff' : '#1c1b19', toneMapped: false })
+            h('meshStandardMaterial', {
+                color: ledOn ? '#07131f' : '#1c1b19',
+                emissive: ledOn ? '#d6eeff' : '#000000',
+                emissiveIntensity: ledOn ? 6 : 0,
+                toneMapped: false,
+                roughness: 1,
+                metalness: 0,
+            })
         ))) : [
             h('mesh', { key: 'sky', position: [0, 4.08, -2.2] },
                 h('boxGeometry', { args: [1.15, 0.04, 12] }),
                 h('meshStandardMaterial', {
-                    color: ledOn ? '#c5e4ff' : '#6e6a64',
-                    emissive: ledOn ? '#9fd4ff' : '#000000',
-                    emissiveIntensity: ledOn ? 0.85 : 0,
+                    color: ledOn ? '#07131f' : '#6e6a64',
+                    emissive: ledOn ? '#c5e4ff' : '#000000',
+                    emissiveIntensity: ledOn ? 4.4 : 0,
+                    toneMapped: false,
                     roughness: 0.6,
+                    metalness: 0,
                 })
             ),
         ])
@@ -960,8 +1058,8 @@ function springToward(value, velocity, goal, dt, stiffness, damping) {
 function poseFor(index, slots) {
     if (index < 0 || !slots[index]) {
         return {
-            pos: new THREE.Vector3(0, 1.52, 4.35),
-            target: new THREE.Vector3(0, 1.05, -6.5),
+            pos: new THREE.Vector3(0, 1.88, 7.6),
+            target: new THREE.Vector3(0, 0.42, -4.8),
         };
     }
     const slot = slots[index];
@@ -979,8 +1077,8 @@ function clampNum(value, min, max) {
 
 function GuidedCamera({ focusIndex }) {
     const { camera, gl } = useThree();
-    const pos = useRef(new THREE.Vector3(0, 1.52, 4.35));
-    const target = useRef(new THREE.Vector3(0, 1.05, -6.5));
+    const pos = useRef(new THREE.Vector3(0, 1.88, 7.6));
+    const target = useRef(new THREE.Vector3(0, 0.42, -4.8));
     const velP = useRef(new THREE.Vector3());
     const velT = useRef(new THREE.Vector3());
     const look = useRef({
@@ -1023,11 +1121,8 @@ function GuidedCamera({ focusIndex }) {
             const dx = clampNum(rawX, -12, 12);
             const dy = clampNum(rawY, -12, 12);
             D.moved += Math.hypot(dx, dy);
-            const lead = 0.16;
-            L.aimYaw = clampNum(L.aimYaw + dx * 0.0017, L.yaw - lead, L.yaw + lead);
-            L.aimPitch = clampNum(L.aimPitch + dy * 0.0011, L.pitch - lead * 0.65, L.pitch + lead * 0.65);
-            L.aimYaw = clampNum(L.aimYaw, -0.48, 0.48);
-            L.aimPitch = clampNum(L.aimPitch, -0.2, 0.16);
+            L.aimYaw = clampNum(L.aimYaw + dx * 0.0048, -Math.PI, Math.PI);
+            L.aimPitch = clampNum(L.aimPitch + dy * 0.0048, -1.5, 1.5);
             if (D.moved > 10) bus.suppressClick = true;
         };
         const up = () => {
@@ -1038,9 +1133,8 @@ function GuidedCamera({ focusIndex }) {
         };
         const wheel = (event) => {
             event.preventDefault();
-            const step = clampNum(event.deltaY, -70, 70) * 0.0007;
-            L.aimDolly = clampNum(L.aimDolly + step, L.dolly - 0.24, L.dolly + 0.24);
-            L.aimDolly = clampNum(L.aimDolly, -1.2, 1.4);
+            const step = clampNum(event.deltaY, -120, 120) * 0.018;
+            L.aimDolly = clampNum(L.aimDolly + step, -1.6, 13);
         };
         const leave = () => {};
         el.addEventListener('pointerdown', down);
@@ -1075,9 +1169,9 @@ function GuidedCamera({ focusIndex }) {
             const gap = aim - shown;
             return shown + clampNum(gap * 0.08, -maxStep, maxStep);
         };
-        L.yaw = ease(L.yaw, L.aimYaw, 0.0096);
-        L.pitch = ease(L.pitch, L.aimPitch, 0.0064);
-        L.dolly = ease(L.dolly, L.aimDolly, 0.02);
+        L.yaw = ease(L.yaw, L.aimYaw, 0.055);
+        L.pitch = ease(L.pitch, L.aimPitch, 0.055);
+        L.dolly = ease(L.dolly, L.aimDolly, 0.28);
 
         const pose = poseFor(focusIndex, bus.slots);
         springToward(pos.current, velP.current, pose.pos, dt, 78, 16);
@@ -1096,10 +1190,12 @@ function GuidedCamera({ focusIndex }) {
         t.right.normalize();
         t.qPitch.setFromAxisAngle(t.right, pitch);
         t.dir.applyQuaternion(t.qPitch);
-        t.eye.copy(pos.current).addScaledVector(t.dir, L.dolly);
+        const aisle = t.dir.z < 0 ? -1 : 1;
+        t.eye.copy(pos.current);
+        t.eye.z += aisle * L.dolly;
         t.eye.x = clampNum(t.eye.x, -1.45, 1.45);
         t.eye.y = clampNum(t.eye.y, 0.95, 2.25);
-        t.eye.z = clampNum(t.eye.z, -12, 5.4);
+        t.eye.z = clampNum(t.eye.z, -5.2, 9.2);
         t.aim.copy(t.eye).addScaledVector(t.dir, dist);
         camera.position.copy(t.eye);
         camera.lookAt(t.aim);
@@ -1294,13 +1390,13 @@ function HallEnv() {
     useEffect(() => {
         const pmrem = new THREE.PMREMGenerator(gl);
         const env = new THREE.Scene();
-        env.add(new THREE.HemisphereLight('#fff8ee', '#b7aea4', 0.55));
+        env.add(new THREE.HemisphereLight('#f3e6d4', '#8d7b68', 0.7));
         const key = new THREE.DirectionalLight('#fffaf2', 2.4);
         key.position.set(1.5, 8, 3);
         env.add(key);
         const ceil = new THREE.Mesh(
             new THREE.PlaneGeometry(16, 16),
-            new THREE.MeshBasicMaterial({ color: '#fffdf8' })
+            new THREE.MeshBasicMaterial({ color: '#e4d5c2' })
         );
         ceil.position.set(0, 6.2, 0);
         ceil.rotation.x = Math.PI / 2;
@@ -1319,7 +1415,7 @@ function HallEnv() {
         ground.position.set(0, -1.5, 0);
         ground.rotation.x = -Math.PI / 2;
         env.add(ground);
-        const sideMat = new THREE.MeshBasicMaterial({ color: '#f4ebe3' });
+        const sideMat = new THREE.MeshBasicMaterial({ color: '#c4aa90' });
         const left = new THREE.Mesh(new THREE.PlaneGeometry(16, 8), sideMat);
         left.position.set(-7, 2, 0);
         left.rotation.y = Math.PI / 2;
@@ -1330,7 +1426,7 @@ function HallEnv() {
         env.add(right);
         const target = pmrem.fromScene(env, 0.02);
         scene.environment = target.texture;
-        if ('environmentIntensity' in scene) scene.environmentIntensity = 1.2;
+        if ('environmentIntensity' in scene) scene.environmentIntensity = 0.85;
         return () => {
             scene.environment = null;
             target.dispose();
@@ -1377,10 +1473,9 @@ function Scene({ snap, onSelect, concept }) {
         return () => { bus.setCeilingOn = null; };
     }, []);
     const packs = useHallFloors(snap);
-    const activeFloor = String((snap && snap.floor) || '1');
-    const order = [activeFloor].concat(['1', '2', '3'].filter((level) => level !== activeFloor));
+    const order = ['A', 'B', 'C'];
     const shifts = [0, -4.2, -8.4];
-    const slots = (packs[activeFloor] && packs[activeFloor].length) ? packs[activeFloor] : [];
+    const slots = (packs.A && packs.A.length) ? packs.A : [];
     const selected = snap && snap.selected;
     const selectedId = selected ? cellId(
         snap.cells && snap.cells[selected.r + '-' + selected.c],
@@ -1417,10 +1512,10 @@ function Scene({ snap, onSelect, concept }) {
     }, [slots, onSelect]);
 
     return h(React.Fragment, null,
-        h('color', { attach: 'background', args: [(concept || CONCEPTS[0]).marble ? '#f7f6f3' : (concept || CONCEPTS[0]).wall] }),
+        h('color', { attach: 'background', args: [(concept || CONCEPTS[0]).marble ? '#e6ddd2' : (concept || CONCEPTS[0]).wall] }),
         h(HallEnv),
         (concept || CONCEPTS[0]).marble ? null : h('fog', { attach: 'fog', args: [(concept || CONCEPTS[0]).wall, 14, 28] }),
-        h('hemisphereLight', { args: ['#fffdf8', '#e7e2da', ((concept || CONCEPTS[0]).marble ? 0.42 : 0.4) * (ceilingOn ? 1 : 0.4)] }),
+        h('hemisphereLight', { args: ['#f6efe6', '#cbbba6', ((concept || CONCEPTS[0]).marble ? 0.28 : 0.4) * (ceilingOn ? 1 : 0.4)] }),
         h('ambientLight', { color: '#fff6ee', intensity: (concept || CONCEPTS[0]).marble ? 0.16 : (concept || CONCEPTS[0]).amb }),
         h('directionalLight', {
             position: [0.2, 7.2, 3.4],
@@ -1471,7 +1566,17 @@ function Scene({ snap, onSelect, concept }) {
             h(PortraitPlates, { key: 'photo-' + level, slots: packs[level] || [], shiftZ: shifts[index] }),
         ]),
         h(ConceptProps, { slots, concept }),
-        h(GuidedCamera, { focusIndex })
+        h(GuidedCamera, { focusIndex }),
+        h(EffectComposer, { disableNormalPass: true, multisampling: 0, resolutionScale: 1 },
+            h(Bloom, {
+                mipmapBlur: true,
+                luminanceThreshold: 0.9,
+                luminanceSmoothing: 0.42,
+                intensity: ceilingOn ? 1.85 : 0,
+                radius: 0.92,
+            }),
+            h(SMAA, { preset: SMAAPreset.ULTRA })
+        )
     );
 }
 
@@ -1498,7 +1603,7 @@ function App() {
     return h(Canvas, {
         shadows: true,
         dpr: [1, 2],
-        camera: { position: [0, 1.52, 4.35], fov: 42, near: 0.08, far: 80 },
+        camera: { position: [0, 1.88, 7.6], fov: 50, near: 0.08, far: 80 },
         gl: { antialias: true, toneMapping: THREE.ACESFilmicToneMapping },
         onCreated: ({ gl }) => {
             gl.toneMappingExposure = 1.08;
@@ -1516,23 +1621,10 @@ function paintDom(snap) {
     const addrEl = root.querySelector('[data-facility-address]');
     const phoneEl = root.querySelector('[data-facility-phone]');
     const vip = root.querySelector('[data-vip-label]');
-    const seats = root.querySelector('[data-seat-count]');
     if (nameEl) nameEl.textContent = facility.name || '세종봉안당';
     if (addrEl) addrEl.textContent = facility.address || '';
     if (phoneEl) phoneEl.textContent = facility.phone || '';
     if (vip) vip.textContent = (facility.name || '봉안당') + ' 3D 복도';
-
-    const cells = snap.cells || {};
-    let occupied = 0;
-    let total = 0;
-    Object.keys(cells).forEach((key) => {
-        const cell = cells[key];
-        if (!cell || typeof cell.row !== 'number') return;
-        total += 1;
-        if (cell.occupied) occupied += 1;
-    });
-    if (!total) total = (snap.rows || 6) * (snap.cols || 10);
-    if (seats) seats.textContent = '총 ' + total + '석 중 분양 가능 ' + Math.max(0, total - occupied) + '석';
 
     const grid = root.querySelector('[data-grid]');
     if (!grid) return;
@@ -1571,7 +1663,8 @@ function mount(api) {
         const paintCeiling = () => {
             const on = bus.ceilingOn !== false;
             ceilingBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
-            ceilingBtn.textContent = on ? '천장등 끄기' : '천장등 켜기';
+            const label = ceilingBtn.querySelector('[data-ceiling-label]');
+            if (label) label.textContent = on ? '천장등 끄기' : '천장등 켜기';
         };
         paintCeiling();
         ceilingBtn.addEventListener('click', () => {
