@@ -1091,6 +1091,7 @@ function createFilmReel(urls) {
     texture.minFilter = THREE.LinearFilter;
     texture.magFilter = THREE.LinearFilter;
     texture.generateMipmaps = false;
+    texture.premultipliedAlpha = false;
     let index = 0;
     const playAt = (next) => {
         index = ((next % urls.length) + urls.length) % urls.length;
@@ -1140,6 +1141,31 @@ function createFilmReel(urls) {
             ctx.fillStyle = 'rgba(0,0,0,0.14)';
             ctx.fillRect(0, 0, w, h);
         }
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-out';
+        const bandX = w * 0.09;
+        const bandY = h * 0.12;
+        const wash = (grad, x, y, rw, rh) => {
+            ctx.fillStyle = grad;
+            ctx.fillRect(x, y, rw, rh);
+        };
+        const left = ctx.createLinearGradient(0, 0, bandX, 0);
+        left.addColorStop(0, 'rgba(0,0,0,1)');
+        left.addColorStop(1, 'rgba(0,0,0,0)');
+        wash(left, 0, 0, bandX, h);
+        const right = ctx.createLinearGradient(w, 0, w - bandX, 0);
+        right.addColorStop(0, 'rgba(0,0,0,1)');
+        right.addColorStop(1, 'rgba(0,0,0,0)');
+        wash(right, w - bandX, 0, bandX, h);
+        const top = ctx.createLinearGradient(0, 0, 0, bandY);
+        top.addColorStop(0, 'rgba(0,0,0,1)');
+        top.addColorStop(1, 'rgba(0,0,0,0)');
+        wash(top, 0, 0, w, bandY);
+        const bottom = ctx.createLinearGradient(0, h, 0, h - bandY);
+        bottom.addColorStop(0, 'rgba(0,0,0,1)');
+        bottom.addColorStop(1, 'rgba(0,0,0,0)');
+        wash(bottom, 0, h - bandY, w, bandY);
+        ctx.restore();
         texture.needsUpdate = true;
     };
     return {
@@ -1220,9 +1246,9 @@ function EndAlcove() {
         h('mesh', { position: [0, topY - 0.022, 0.24], castShadow: true, receiveShadow: true, material: wood },
             h('boxGeometry', { args: [1.7, 0.044, 0.5] })
         ),
-        h('mesh', { position: [0, 2.32, 0.04] },
-            h('planeGeometry', { args: [3.2, 1.8] }),
-            h('meshBasicMaterial', { map: film.texture, toneMapped: false })
+        h('mesh', { position: [0, 2.4, 0.04] },
+            h('planeGeometry', { args: [4.7, 2.64] }),
+            h('meshBasicMaterial', { map: film.texture, transparent: true, depthWrite: false, toneMapped: false })
         ),
         vase(-0.28),
         vase(0.28)
