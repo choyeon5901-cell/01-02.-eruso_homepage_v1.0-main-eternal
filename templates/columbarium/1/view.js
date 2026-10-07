@@ -6,6 +6,7 @@ import * as THREE from 'three';
 
 const DRACO_DECODER = 'https://www.gstatic.com/draco/versioned/decoders/1.5.7/';
 const URN_URL = 'templates/columbarium/1/models/urn.glb?v=ceramic2';
+const KIOSK_FONT = 'https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-kr@5.2.8/korean-700-normal.ttf';
 const h = React.createElement;
 
 const CELL_W = 0.76;
@@ -55,6 +56,8 @@ const bus = {
     suppressClick: false,
     nicheScale: 1,
     nicheVel: 0,
+    ceilingOn: true,
+    setCeilingOn: null,
 };
 
 useGLTF.preload(URN_URL, DRACO_DECODER);
@@ -125,6 +128,183 @@ function buildSlots(snap) {
         }
     }
     return list;
+}
+
+function resolveApiBase() {
+    const host = (location.hostname || '').toLowerCase();
+    const isLocal = !host
+        || host === 'localhost'
+        || host === '127.0.0.1'
+        || host === '[::1]'
+        || host.endsWith('.local')
+        || /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host);
+    const qs = new URLSearchParams(location.search).get('api');
+    if (qs === 'prod') return 'https://api.erum2026.co.kr';
+    if (qs === 'local' || isLocal) return 'http://localhost:1210';
+    const meta = document.querySelector('meta[name="eruso-api-base"]');
+    return ((meta && meta.getAttribute('content')) || 'https://api.erum2026.co.kr').replace(/\/$/, '');
+}
+
+function slotsFromPayload(payload, zone, floor) {
+    const cells = {};
+    (payload.cells || []).forEach((cell) => {
+        const r = (Number(cell.row) || 1) - 1;
+        const c = (Number(cell.col) || 1) - 1;
+        cells[r + '-' + c] = {
+            id: cell.cell_code || null,
+            row: Number(cell.row) || (r + 1),
+            col: Number(cell.col) || (c + 1),
+            zone,
+            floor,
+            occupied: !!cell.occupied,
+            name: cell.name || cell.memorial_name || null,
+            deceased_name: cell.deceased_name || cell.name || cell.memorial_name || null,
+            title: cell.title || null,
+            is_public: cell.is_public === true,
+            image_url: cell.image_url || null,
+            birth: cell.birth || null,
+            death: cell.death || null,
+            href: cell.href || null,
+            view_path: cell.view_path || null,
+            login_path: cell.login_path || null,
+            columbarium_name: cell.columbarium_name || null,
+            columbarium_kind: cell.columbarium_kind || null,
+            price: cell.price || null,
+            memorial_room_id: cell.memorial_room_id || null,
+        };
+    });
+    return buildSlots({ cells, zone, floor, rows: 6, cols: 10 });
+}
+
+function useHallFloors(snap) {
+    const zone = (snap && snap.zone) || 'A';
+    const floor = String((snap && snap.floor) || '1');
+    const [packs, setPacks] = useState(() => ({
+        1: buildSlots(snap && String(snap.floor) === '1' ? snap : null),
+        2: buildSlots(snap && String(snap.floor) === '2' ? snap : null),
+        3: buildSlots(snap && String(snap.floor) === '3' ? snap : null),
+    }));
+    useEffect(() => {
+        let cancel = false;
+        const base = resolveApiBase();
+        const facilityKey = (snap && snap.facility && snap.facility.id) || 'sejong-columbarium';
+        const filterName = facilityKey === 'sejong-columbarium'
+            ? '세종봉안당'
+            : ((snap && snap.facility && snap.facility.name) || '세종봉안당');
+        Promise.all(['1', '2', '3'].map((level) => fetch(
+            base + '/api/memorial-rooms/columbarium-layout?zone='
+            + encodeURIComponent(zone) + '&floor=' + level + '&cols=10&rows=6&facility_key='
+            + encodeURIComponent(facilityKey) + '&facility_name=' + encodeURIComponent(filterName)
+        ).then((res) => {
+            if (!res.ok) throw new Error(String(res.status));
+            return res.json();
+        }).then((payload) => [level, slotsFromPayload(payload, zone, level)]))).then((pairs) => {
+            if (cancel) return;
+            const next = { 1: [], 2: [], 3: [] };
+            pairs.forEach(([level, slots]) => { next[level] = slots; });
+            setPacks(next);
+            const shown = next[floor] || [];
+            const occupied = shown.filter((slot) => slot.occupied).length;
+            const seats = document.querySelector('#columbarium-template-root [data-seat-count]');
+            if (seats && shown.length) {
+                seats.textContent = '총 ' + shown.length + '석 중 안치 ' + occupied + '석 · 분양 가능 ' + (shown.length - occupied) + '석';
+            }
+        }).catch(() => {});
+        return () => { cancel = true; };
+    }, [zone, floor]);
+    return packs;
+}
+
+function hasPhoto(slot) {
+    return !!(slot && slot.cell && slot.cell.image_url);
+}
+
+function mediaUrl(cell) {
+    const raw = (cell && cell.image_url) || '';
+    if (!raw) return '';
+    if (/^https?:/i.test(raw)) return raw;
+    return resolveApiBase() + (raw.charAt(0) === '/' ? raw : '/' + raw);
+}
+
+function makeNameTexture(label, image) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 320;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#141820';
+    ctx.fillRect(0, 0, 256, 320);
+    if (image && image.width) {
+        const dw = 256;
+        const dh = 248;
+        const scale = Math.max(dw / image.width, dh / image.height);
+        const w = image.width * scale;
+        const hh = image.height * scale;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, dw, dh);
+        ctx.clip();
+        ctx.drawImage(image, (dw - w) / 2, (dh - hh) / 2, w, hh);
+        ctx.restore();
+    }
+    ctx.fillStyle = '#141820';
+    ctx.fillRect(0, 248, 256, 72);
+    ctx.fillStyle = '#f7f3ec';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '600 36px "Malgun Gothic", "Noto Sans KR", sans-serif';
+    ctx.fillText(String(label || '').replace(/^故\s*/, '').slice(0, 6), 128, 284);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 8;
+    return tex;
+}
+
+function PortraitPlate({ slot }) {
+    const mesh = useRef(null);
+    const label = personName(slot.cell);
+    const [map, setMap] = useState(() => makeNameTexture(label, null));
+    useEffect(() => {
+        let dead = false;
+        const url = mediaUrl(slot.cell);
+        if (!url) return undefined;
+        const loader = new THREE.TextureLoader();
+        loader.setCrossOrigin('anonymous');
+        loader.load(url, (photo) => {
+            if (dead) {
+                photo.dispose();
+                return;
+            }
+            const next = makeNameTexture(label, photo.image);
+            photo.dispose();
+            setMap((prev) => {
+                if (prev) prev.dispose();
+                return next;
+            });
+        });
+        return () => { dead = true; };
+    }, [slot, label]);
+    useLayoutEffect(() => {
+        if (!mesh.current) return;
+        const dummy = new THREE.Object3D();
+        placeLocal(dummy, slot, [0.1, 0.02, 0.16], 1);
+        mesh.current.position.copy(dummy.position);
+        mesh.current.quaternion.copy(dummy.quaternion);
+    }, [slot]);
+    return h('mesh', { ref: mesh },
+        h('planeGeometry', { args: [0.14, 0.18] }),
+        h('meshBasicMaterial', { map, toneMapped: false })
+    );
+}
+
+function PortraitPlates({ slots, shiftZ }) {
+    const list = (slots || []).filter((slot) => hasPhoto(slot));
+    if (!list.length) return null;
+    return h('group', { position: [0, 0, shiftZ || 0] },
+        list.map((slot) => h(PortraitPlate, {
+            key: slot.id + '-' + slot.r + '-' + slot.c,
+            slot,
+        }))
+    );
 }
 
 function writeInstances(mesh, slots, hover, selectedId, colorFor, scaleFor) {
@@ -285,12 +465,12 @@ function NicheGrid({ slots, hover, selectedId, focusIndex, onHover, onSelect, co
     const ledGeo = useMemo(() => new THREE.BoxGeometry(0.1, 0.018, 0.06), []);
     const tabletGeo = useMemo(() => new THREE.BoxGeometry(0.2, 0.128, 0.012), []);
     const tabletTex = useMemo(() => makeTabletTexture(), []);
-    const frameMat = useMemo(() => new THREE.MeshStandardMaterial({
-        color: '#f7f6f3', roughness: 0.42, metalness: 0.04, envMapIntensity: 0.55,
+    const frameMat = useMemo(() => new THREE.MeshPhysicalMaterial({
+        color: '#f4f1ec', roughness: 0.34, metalness: 0.04, clearcoat: 0.35, clearcoatRoughness: 0.28, envMapIntensity: 0.85,
     }), []);
     const glassMat = useMemo(() => new THREE.MeshPhysicalMaterial({
-        color: '#ffffff', roughness: 0.04, metalness: 0, transmission: 0.12,
-        thickness: 0.01, transparent: true, opacity: 0.03, depthWrite: false,
+        color: '#f4f8fb', roughness: 0.02, metalness: 0.08, transparent: true, opacity: 0.22,
+        envMapIntensity: 1.35, depthWrite: false,
     }), []);
     const glowMat = useMemo(() => {
         const canvas = document.createElement('canvas');
@@ -314,19 +494,23 @@ function NicheGrid({ slots, hover, selectedId, focusIndex, onHover, onSelect, co
 
     useLayoutEffect(() => {
         const look = concept || CONCEPTS[0];
-        frameMat.color.set(look.marble ? '#c6a15b' : look.frame);
-        frameMat.emissive.set(look.marble ? '#5c4314' : '#000000');
-        frameMat.emissiveIntensity = look.marble ? 0.25 : 0;
-        frameMat.metalness = look.marble ? 0.55 : Math.max(look.metal, 0.35);
-        frameMat.roughness = look.marble ? 0.34 : look.rough;
-        frameMat.envMapIntensity = look.marble ? 1.35 : 0.8;
-        glassMat.color.set(look.marble ? '#fff6ea' : '#ffffff');
-        glassMat.opacity = look.marble ? 0.18 : 0.03;
-        glassMat.metalness = look.marble ? 0.12 : 0;
-        glassMat.roughness = look.marble ? 0.06 : 0.04;
+        frameMat.color.set(look.marble ? '#f4f1ec' : look.frame);
+        frameMat.emissive.set('#000000');
+        frameMat.emissiveIntensity = 0;
+        frameMat.metalness = look.marble ? 0.04 : Math.max(look.metal, 0.35);
+        frameMat.roughness = look.marble ? 0.32 : look.rough;
+        frameMat.clearcoat = look.marble ? 0.4 : 0.08;
+        frameMat.clearcoatRoughness = look.marble ? 0.22 : 0.4;
+        frameMat.envMapIntensity = look.marble ? 0.9 : 0.8;
+        glassMat.color.set(look.marble ? '#eef4f8' : '#ffffff');
+        glassMat.opacity = look.marble ? 0.24 : 0.08;
+        glassMat.metalness = look.marble ? 0.08 : 0;
+        glassMat.roughness = 0.02;
+        glassMat.envMapIntensity = look.marble ? 1.45 : 0.45;
         glowMat.color.set(look.marble ? '#fff1dc' : look.wall);
-        glowMat.emissive.set(look.marble ? '#f0c48a' : '#000000');
-        glowMat.emissiveIntensity = look.marble ? 0.42 : 0.15;
+        glowMat.emissive.set(look.marble ? '#ffc98a' : '#000000');
+        glowMat.emissiveIntensity = look.marble ? 0.55 : 0.15;
+        glowMat.roughness = look.marble ? 0.9 : 0.72;
         ledMat.color.set(look.marble ? '#fff6e2' : look.light);
         syncNicheFrames();
     }, [slots, hover, selectedId, focusIndex, concept, frameMat, glassMat, glowMat, ledMat]);
@@ -356,9 +540,9 @@ function NicheGrid({ slots, hover, selectedId, focusIndex, onHover, onSelect, co
         paint(led.current, [0, CELL_H * 0.28, 0.02]);
         if (tablet.current) {
             slots.forEach((slot, i) => {
-                const scale = i === focusIndex ? bus.nicheScale : 1;
-                const side = slot.c % 2 === 0 ? -0.2 : 0.2;
-                placeLocal(dummy, slot, [side, -0.16, 0.175], scale);
+                dummy.position.set(0, -30, 0);
+                dummy.scale.set(0, 0, 0);
+                dummy.updateMatrix();
                 tablet.current.setMatrixAt(i, dummy.matrix);
             });
             tablet.current.instanceMatrix.needsUpdate = true;
@@ -428,13 +612,13 @@ function makeCeramicTexture() {
     wash.addColorStop(1, '#e6dccb');
     ctx.fillStyle = wash;
     ctx.fillRect(0, 0, 512, 512);
-    ctx.strokeStyle = 'rgba(42, 36, 30, 0.78)';
+    ctx.strokeStyle = 'rgba(70, 54, 40, 0.28)';
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     for (let col = 0; col < 4; col += 1) {
         const x = 86 + col * 96;
         let y = 150;
-        ctx.lineWidth = 3.2;
+        ctx.lineWidth = 2.2;
         for (let stroke = 0; stroke < 6; stroke += 1) {
             ctx.beginPath();
             ctx.moveTo(x, y);
@@ -451,62 +635,61 @@ function makeCeramicTexture() {
     return tex;
 }
 
+function UrnModel({ slot, source, bodyMat, goldMat }) {
+    const root = useMemo(() => {
+        const obj = source.clone(true);
+        obj.traverse((child) => {
+            if (!child.isMesh) return;
+            const label = (child.name || '') + ' ' + ((child.material && child.material.name) || '');
+            child.material = /trim|gold/i.test(label) ? goldMat : bodyMat;
+            child.castShadow = true;
+            child.frustumCulled = false;
+        });
+        return obj;
+    }, [source, bodyMat, goldMat]);
+    useLayoutEffect(() => {
+        const dummy = new THREE.Object3D();
+        placeLocal(dummy, slot, [-0.08, -0.17, 0.05], 1);
+        root.position.copy(dummy.position);
+        root.quaternion.copy(dummy.quaternion);
+        root.scale.setScalar(0.45);
+        root.visible = true;
+    }, [slot, root]);
+    return h('primitive', { object: root });
+}
+
 function UrnGrid({ slots, concept, shiftZ }) {
     const gltf = useGLTF(URN_URL, DRACO_DECODER);
-    const parts = useMemo(() => {
-        const list = [];
-        gltf.scene.traverse((obj) => {
-            if (!obj.isMesh || !obj.geometry) return;
-            const label = (obj.name || '') + ' ' + ((obj.material && obj.material.name) || '');
-            list.push({ geometry: obj.geometry, gold: /trim|gold/i.test(label) });
-        });
-        return list;
-    }, [gltf]);
     const ceramicMap = useMemo(() => makeCeramicTexture(), []);
     const bodyMat = useMemo(() => new THREE.MeshPhysicalMaterial({
-        color: '#fffaf4', map: ceramicMap, roughness: 0.38, metalness: 0.02, clearcoat: 0.28, clearcoatRoughness: 0.35, envMapIntensity: 0.7,
+        color: '#f4ead8', map: ceramicMap, roughness: 0.08, metalness: 0.02, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 1.8, sheen: 0.35, sheenRoughness: 0.25, sheenColor: new THREE.Color('#fff4e4'),
     }), [ceramicMap]);
     const goldMat = useMemo(() => new THREE.MeshPhysicalMaterial({
-        color: '#e6c36a', roughness: 0.18, metalness: 0.94, clearcoat: 0.35, envMapIntensity: 1.5,
+        color: '#c9b48a', roughness: 0.22, metalness: 0.82, clearcoat: 0.4, clearcoatRoughness: 0.18, envMapIntensity: 1.7,
     }), []);
-    const refs = useRef([]);
-
     useLayoutEffect(() => {
         const look = concept || CONCEPTS[0];
-        bodyMat.color.set(look.marble ? '#fffaf4' : look.urn);
+        bodyMat.color.set(look.marble ? '#f4ead8' : look.urn);
         bodyMat.emissive.set(look.marble ? '#fff3e0' : '#fffaf6');
-        bodyMat.emissiveIntensity = look.marble ? 0.06 : 0.04;
+        bodyMat.emissiveIntensity = look.marble ? 0.04 : 0.04;
         bodyMat.metalness = look.marble ? 0.02 : look.urnMetal;
-        bodyMat.roughness = look.marble ? 0.48 : look.urnRough;
-        bodyMat.clearcoat = look.marble ? 0.12 : 0.45;
-        goldMat.color.set(look.marble ? '#e6c36a' : look.trim);
-        goldMat.metalness = look.marble ? 0.92 : 0.75;
-        goldMat.roughness = look.marble ? 0.2 : 0.22;
-        const creams = ['#f7f1e4', '#efe2ce', '#f4ead8', '#e6d7c2', '#fbf6ee', '#e9dcc8'];
-        const dummy = new THREE.Object3D();
-        parts.forEach((part, index) => {
-            const mesh = refs.current[index];
-            if (!mesh) return;
-            slots.forEach((slot, i) => {
-                const scale = 0.5 + ((i * 5) % 4) * 0.02;
-                const nudge = ((i % 3) - 1) * 0.03;
-                placeLocal(dummy, slot, [nudge, -0.2, 0.02], scale);
-                mesh.setMatrixAt(i, dummy.matrix);
-                if (!part.gold) mesh.setColorAt(i, new THREE.Color(look.marble ? creams[i % creams.length] : look.urn));
-            });
-            mesh.instanceMatrix.needsUpdate = true;
-            if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-        });
-    }, [slots, parts, concept, bodyMat, goldMat]);
-
-    if (!parts.length) return null;
-    return h('group', { position: [0, 0, shiftZ || 0] }, parts.map((part, index) => h('instancedMesh', {
-        key: part.gold ? 'trim' : 'body',
-        ref: (node) => { refs.current[index] = node; },
-        args: [part.geometry, part.gold ? goldMat : bodyMat, Math.max(slots.length, 1)],
-        castShadow: true,
-        receiveShadow: true,
-        raycast: () => null,
+        bodyMat.roughness = look.marble ? 0.08 : look.urnRough;
+        bodyMat.clearcoat = look.marble ? 1 : 0.45;
+        bodyMat.clearcoatRoughness = look.marble ? 0.05 : 0.35;
+        bodyMat.envMapIntensity = look.marble ? 1.8 : 0.7;
+        goldMat.color.set(look.marble ? '#c9b48a' : look.trim);
+        goldMat.metalness = look.marble ? 0.82 : 0.75;
+        goldMat.roughness = 0.22;
+        goldMat.envMapIntensity = look.marble ? 1.7 : 1.5;
+    }, [concept, bodyMat, goldMat]);
+    const list = (slots || []).filter((slot) => hasPhoto(slot));
+    if (!list.length) return null;
+    return h('group', { position: [0, 0, shiftZ || 0] }, list.map((slot) => h(UrnModel, {
+        key: slot.id + '-' + slot.r + '-' + slot.c,
+        slot,
+        source: gltf.scene,
+        bodyMat,
+        goldMat,
     })));
 }
 
@@ -562,6 +745,13 @@ function ConceptProps({ slots, concept }) {
         mat.color.set(concept.trim);
         const dummy = new THREE.Object3D();
         slots.forEach((slot, i) => {
+            if (!slot.occupied) {
+                dummy.position.set(0, -30, 0);
+                dummy.scale.set(0, 0, 0);
+                dummy.updateMatrix();
+                mesh.setMatrixAt(i, dummy.matrix);
+                return;
+            }
             dummy.position.copy(slot.position);
             dummy.quaternion.copy(slot.quaternion);
             const shift = new THREE.Vector3(0.16, -CELL_H * 0.2, 0.04).applyQuaternion(slot.quaternion);
@@ -627,8 +817,31 @@ function makeMarbleTexture() {
     return tex;
 }
 
-function Room({ concept }) {
+function makePlasterRoughness() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    const img = ctx.createImageData(256, 256);
+    for (let i = 0; i < img.data.length; i += 4) {
+        const n = 150 + Math.random() * 70;
+        img.data[i] = n;
+        img.data[i + 1] = n;
+        img.data[i + 2] = n;
+        img.data[i + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(5, 8);
+    return tex;
+}
+
+function Room({ concept, ceilingOn }) {
     const look = concept || CONCEPTS[0];
+    const ledOn = ceilingOn !== false;
+    const plaster = useMemo(() => makePlasterRoughness(), []);
     const floorTex = useMemo(() => {
         const tex = makeMarbleTexture();
         tex.repeat.set(2.2, 2.8);
@@ -658,29 +871,29 @@ function Room({ concept }) {
         wallMat.map = look.marble ? wallTex : null;
         wallMat.emissive = wallMat.emissive || new THREE.Color();
         wallMat.emissive.set(look.marble ? '#fffaf4' : '#000000');
-        wallMat.emissiveIntensity = look.marble ? 0.08 : 0;
-        wallMat.roughness = look.marble ? 0.46 : Math.min(0.92, look.rough + 0.08);
-        wallMat.clearcoat = look.marble ? 0.18 : 0;
+        wallMat.emissiveIntensity = look.marble ? 0.02 : 0;
+        wallMat.roughnessMap = look.marble ? plaster : null;
+        wallMat.roughness = look.marble ? 0.72 : Math.min(0.92, look.rough + 0.08);
+        wallMat.clearcoat = look.marble ? 0.08 : 0;
         wallMat.needsUpdate = true;
-    }, [look, floorMat, wallMat, floorTex, wallTex]);
+    }, [look, floorMat, wallMat, floorTex, wallTex, plaster]);
 
     return h('group', null,
         look.marble
             ? h('mesh', { rotation: [-Math.PI / 2, 0, 0], position: [0, 0.002, -4.6], receiveShadow: true },
                 h('planeGeometry', { args: [7.2, 22] }),
                 h(MeshReflectorMaterial, {
-                    map: floorTex,
-                    blur: [280, 80],
+                    blur: [80, 20],
                     resolution: 512,
-                    mixBlur: 0.65,
-                    mixStrength: 0.85,
-                    roughness: 0.38,
-                    depthScale: 1.05,
-                    minDepthThreshold: 0.25,
+                    mixBlur: 0.06,
+                    mixStrength: 1.7,
+                    roughness: 0.035,
+                    depthScale: 1.15,
+                    minDepthThreshold: 0.15,
                     maxDepthThreshold: 1.3,
-                    color: '#f6f1e8',
-                    metalness: 0.12,
-                    mirror: 0.42,
+                    color: '#f3f1ee',
+                    metalness: 0.04,
+                    mirror: 0.96,
                 })
             )
             : h('mesh', { rotation: [-Math.PI / 2, 0, 0], position: [0, 0, 0.15], receiveShadow: true, material: floorMat },
@@ -699,17 +912,17 @@ function Room({ concept }) {
             h('boxGeometry', { args: [5.6, 4.15, 0.12] })
         ),
         ...(look.marble ? [
-            h('mesh', { key: 'skylight', position: [0, 4.12, -4.6], rotation: [Math.PI / 2, 0, 0] },
-                h('planeGeometry', { args: [1.55, 14] }),
-                h('meshBasicMaterial', { color: '#fffaf2' })
+            h('mesh', { key: 'skylight', position: [0, 4.11, -4.6], rotation: [Math.PI / 2, 0, 0] },
+                h('planeGeometry', { args: [0.78, 12] }),
+                h('meshBasicMaterial', { color: ledOn ? '#c5e4ff' : '#1c1b19', toneMapped: false })
             ),
             h('mesh', { key: 'gold-left', position: [-2.55, 0.05, -4.6] },
                 h('boxGeometry', { args: [0.04, 0.06, 18] }),
-                h('meshStandardMaterial', { color: '#d4af37', metalness: 0.88, roughness: 0.24 })
+                h('meshStandardMaterial', { color: '#f7f4ef', roughness: 0.7, metalness: 0.02 })
             ),
             h('mesh', { key: 'gold-right', position: [2.55, 0.05, -4.6] },
                 h('boxGeometry', { args: [0.04, 0.06, 18] }),
-                h('meshStandardMaterial', { color: '#d4af37', metalness: 0.88, roughness: 0.24 })
+                h('meshStandardMaterial', { color: '#f7f4ef', roughness: 0.7, metalness: 0.02 })
             ),
         ].concat([0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => h('mesh', {
             key: 'spot-' + i,
@@ -717,11 +930,16 @@ function Room({ concept }) {
             rotation: [Math.PI / 2, 0, 0],
         },
             h('circleGeometry', { args: [0.07, 24] }),
-            h('meshBasicMaterial', { color: '#fffdf8' })
+            h('meshBasicMaterial', { color: ledOn ? '#eef7ff' : '#1c1b19', toneMapped: false })
         ))) : [
             h('mesh', { key: 'sky', position: [0, 4.08, -2.2] },
                 h('boxGeometry', { args: [1.15, 0.04, 12] }),
-                h('meshStandardMaterial', { color: '#f7f6f3', emissive: '#fffaf4', emissiveIntensity: 0.15, roughness: 0.6 })
+                h('meshStandardMaterial', {
+                    color: ledOn ? '#c5e4ff' : '#6e6a64',
+                    emissive: ledOn ? '#9fd4ff' : '#000000',
+                    emissiveIntensity: ledOn ? 0.85 : 0,
+                    roughness: 0.6,
+                })
             ),
         ])
     );
@@ -747,10 +965,12 @@ function poseFor(index, slots) {
         };
     }
     const slot = slots[index];
-    const side = slot.position.x > 0 ? 1 : -1;
-    const eye = Math.min(Math.max(slot.position.y, 1.2), 1.85);
-    const pos = new THREE.Vector3(side * 0.28, eye, slot.position.z + 2.45);
-    return { pos, target: slot.position.clone() };
+    const world = slot.position.clone();
+    world.z += bus.focusDepth || 0;
+    const side = world.x > 0 ? 1 : -1;
+    const eye = Math.min(Math.max(world.y, 1.2), 1.85);
+    const pos = new THREE.Vector3(side * 0.28, eye, world.z + 2.45);
+    return { pos, target: world };
 }
 
 function clampNum(value, min, max) {
@@ -765,8 +985,7 @@ function GuidedCamera({ focusIndex }) {
     const velT = useRef(new THREE.Vector3());
     const look = useRef({
         yaw: 0, pitch: 0, dolly: 0,
-        vy: 0, vp: 0, vd: 0,
-        gazeY: 0, gazeP: 0, wantY: 0, wantP: 0,
+        aimYaw: 0, aimPitch: 0, aimDolly: 0,
     });
     const drag = useRef({ on: false, lx: 0, ly: 0, moved: 0 });
     const seenFocus = useRef(focusIndex);
@@ -796,25 +1015,20 @@ function GuidedCamera({ focusIndex }) {
             if (el.setPointerCapture) el.setPointerCapture(event.pointerId);
         };
         const move = (event) => {
-            if (D.on) {
-                const dx = event.clientX - D.lx;
-                const dy = event.clientY - D.ly;
-                D.lx = event.clientX;
-                D.ly = event.clientY;
-                const speed = Math.hypot(dx, dy);
-                D.moved += speed;
-                const sens = 0.0022 * (0.72 + Math.min(speed, 64) / 42);
-                L.yaw -= dx * sens;
-                L.pitch -= dy * sens * 0.62;
-                L.vy -= dx * sens * 0.42;
-                L.vp -= dy * sens * 0.26;
-                if (D.moved > 8) bus.suppressClick = true;
-                return;
-            }
-            const rect = el.getBoundingClientRect();
-            if (!rect.width || !rect.height) return;
-            L.wantY = (event.clientX - rect.left) / rect.width - 0.5;
-            L.wantP = (event.clientY - rect.top) / rect.height - 0.5;
+            if (!D.on) return;
+            const rawX = event.clientX - D.lx;
+            const rawY = event.clientY - D.ly;
+            D.lx = event.clientX;
+            D.ly = event.clientY;
+            const dx = clampNum(rawX, -12, 12);
+            const dy = clampNum(rawY, -12, 12);
+            D.moved += Math.hypot(dx, dy);
+            const lead = 0.16;
+            L.aimYaw = clampNum(L.aimYaw + dx * 0.0017, L.yaw - lead, L.yaw + lead);
+            L.aimPitch = clampNum(L.aimPitch + dy * 0.0011, L.pitch - lead * 0.65, L.pitch + lead * 0.65);
+            L.aimYaw = clampNum(L.aimYaw, -0.48, 0.48);
+            L.aimPitch = clampNum(L.aimPitch, -0.2, 0.16);
+            if (D.moved > 10) bus.suppressClick = true;
         };
         const up = () => {
             if (!D.on) return;
@@ -824,14 +1038,11 @@ function GuidedCamera({ focusIndex }) {
         };
         const wheel = (event) => {
             event.preventDefault();
-            const span = Math.min(Math.abs(event.deltaY), 160);
-            const sens = 0.00115 * (0.75 + span / 200);
-            L.vd += Math.sign(event.deltaY) * span * sens;
+            const step = clampNum(event.deltaY, -70, 70) * 0.0007;
+            L.aimDolly = clampNum(L.aimDolly + step, L.dolly - 0.24, L.dolly + 0.24);
+            L.aimDolly = clampNum(L.aimDolly, -1.2, 1.4);
         };
-        const leave = () => {
-            L.wantY = 0;
-            L.wantP = 0;
-        };
+        const leave = () => {};
         el.addEventListener('pointerdown', down);
         el.addEventListener('pointermove', move);
         el.addEventListener('pointerup', up);
@@ -851,30 +1062,22 @@ function GuidedCamera({ focusIndex }) {
     useFrame((_, rawDt) => {
         const dt = Math.min(rawDt || 0.016, 0.033);
         const L = look.current;
-        const D = drag.current;
         if (seenFocus.current !== focusIndex) {
             seenFocus.current = focusIndex;
             L.yaw = 0;
             L.pitch = 0;
             L.dolly = 0;
-            L.vy = 0;
-            L.vp = 0;
-            L.vd = 0;
+            L.aimYaw = 0;
+            L.aimPitch = 0;
+            L.aimDolly = 0;
         }
-        L.yaw += L.vy;
-        L.pitch += L.vp;
-        L.dolly += L.vd;
-        const coast = D.on ? 0.55 : 0.9;
-        L.vy *= coast;
-        L.vp *= coast;
-        L.vd *= 0.84;
-        if (!D.on) {
-            L.gazeY += (L.wantY - L.gazeY) * 0.08;
-            L.gazeP += (L.wantP - L.gazeP) * 0.08;
-        }
-        L.yaw = clampNum(L.yaw, -0.9, 0.9);
-        L.pitch = clampNum(L.pitch, -0.4, 0.36);
-        L.dolly = clampNum(L.dolly, -2.4, 3.1);
+        const ease = (shown, aim, maxStep) => {
+            const gap = aim - shown;
+            return shown + clampNum(gap * 0.08, -maxStep, maxStep);
+        };
+        L.yaw = ease(L.yaw, L.aimYaw, 0.0096);
+        L.pitch = ease(L.pitch, L.aimPitch, 0.0064);
+        L.dolly = ease(L.dolly, L.aimDolly, 0.02);
 
         const pose = poseFor(focusIndex, bus.slots);
         springToward(pos.current, velP.current, pose.pos, dt, 78, 16);
@@ -884,8 +1087,8 @@ function GuidedCamera({ focusIndex }) {
         t.dir.copy(target.current).sub(pos.current);
         const dist = Math.max(t.dir.length(), 0.4);
         t.dir.multiplyScalar(1 / dist);
-        const yaw = L.yaw + (D.on ? 0 : L.gazeY * 0.28);
-        const pitch = L.pitch + (D.on ? 0 : L.gazeP * 0.16);
+        const yaw = L.yaw;
+        const pitch = L.pitch;
         t.qYaw.setFromAxisAngle(t.up, yaw);
         t.dir.applyQuaternion(t.qYaw);
         t.right.crossVectors(t.dir, t.up);
@@ -896,7 +1099,7 @@ function GuidedCamera({ focusIndex }) {
         t.eye.copy(pos.current).addScaledVector(t.dir, L.dolly);
         t.eye.x = clampNum(t.eye.x, -1.45, 1.45);
         t.eye.y = clampNum(t.eye.y, 0.95, 2.25);
-        t.eye.z = clampNum(t.eye.z, -7.2, 5.4);
+        t.eye.z = clampNum(t.eye.z, -12, 5.4);
         t.aim.copy(t.eye).addScaledVector(t.dir, dist);
         camera.position.copy(t.eye);
         camera.lookAt(t.aim);
@@ -905,7 +1108,7 @@ function GuidedCamera({ focusIndex }) {
         const force = (goal - bus.nicheScale) * 280;
         bus.nicheVel += (force - bus.nicheVel * 24) * dt;
         bus.nicheScale += bus.nicheVel * dt;
-        gl.toneMappingExposure = focusIndex >= 0 ? 1.02 : 1.18;
+        gl.toneMappingExposure = focusIndex >= 0 ? 1.02 : 1.12;
     });
     return null;
 }
@@ -926,22 +1129,32 @@ class ModelBoundary extends React.Component {
 
 function makePedestalPlaque() {
     const canvas = document.createElement('canvas');
-    canvas.width = 640;
-    canvas.height = 220;
+    canvas.width = 2048;
+    canvas.height = 512;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#f7f1e6';
-    ctx.fillRect(0, 0, 640, 220);
-    ctx.strokeStyle = '#d4af37';
-    ctx.lineWidth = 10;
-    ctx.strokeRect(12, 12, 616, 196);
-    ctx.fillStyle = '#2a261f';
+    const label = '세종 이루소 봉안당';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 2048, 512);
+    ctx.strokeStyle = '#111111';
+    ctx.lineWidth = 16;
+    ctx.strokeRect(12, 12, 2024, 488);
+    ctx.fillStyle = '#111111';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = '600 54px "Malgun Gothic", "Noto Sans KR", sans-serif';
-    ctx.fillText('세종 이루소 봉안당', 320, 110);
+    let size = 210;
+    ctx.font = '700 ' + size + 'px "Malgun Gothic", "Noto Sans KR", sans-serif';
+    while (size > 96 && ctx.measureText(label).width > 1840) {
+        size -= 8;
+        ctx.font = '700 ' + size + 'px "Malgun Gothic", "Noto Sans KR", sans-serif';
+    }
+    ctx.fillText(label, 1024, 268);
     const tex = new THREE.CanvasTexture(canvas);
     tex.colorSpace = THREE.SRGBColorSpace;
-    tex.anisotropy = 8;
+    tex.generateMipmaps = false;
+    tex.minFilter = THREE.LinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.anisotropy = 16;
+    tex.needsUpdate = true;
     return tex;
 }
 
@@ -965,50 +1178,114 @@ function FlowerBunch() {
     );
 }
 
+function makeKioskScreen() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 1832;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#1a2330';
+    ctx.fillRect(0, 0, 1024, 1832);
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.font = '700 72px "Malgun Gothic", "Noto Sans KR", sans-serif';
+    ctx.fillText('세종 이루소 봉안당', 512, 200);
+    ['봉안함 찾기', '상담 안내', '시설 안내'].forEach((label, i) => {
+        const y = 420 + i * 360;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(96, y, 832, 220);
+        ctx.fillStyle = '#111111';
+        ctx.font = '700 72px "Malgun Gothic", "Noto Sans KR", sans-serif';
+        ctx.fillText(label, 512, y + 140);
+    });
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.generateMipmaps = false;
+    tex.minFilter = THREE.LinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.anisotropy = 16;
+    tex.needsUpdate = true;
+    return tex;
+}
+
+function makeKioskSign() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 2048;
+    canvas.height = 384;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 2048, 384);
+    ctx.fillStyle = '#111111';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '700 150px "Malgun Gothic", "Noto Sans KR", sans-serif';
+    ctx.fillText('추모 안내 키오스크', 1024, 200);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.generateMipmaps = false;
+    tex.minFilter = THREE.LinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    tex.anisotropy = 16;
+    tex.needsUpdate = true;
+    return tex;
+}
+
+function kioskText(label, position, fontSize, color) {
+    return h(Text, {
+        position,
+        fontSize,
+        color,
+        anchorX: 'center',
+        anchorY: 'middle',
+        textAlign: 'center',
+        whiteSpace: 'nowrap',
+        font: KIOSK_FONT,
+        maxWidth: 0.4,
+        characters: '세종이루소봉안당추모안내키오스크찾기상담시설 ',
+    }, label);
+}
+
 function HeroCase() {
-    const plaque = useMemo(() => makePedestalPlaque(), []);
-    const gold = useMemo(() => new THREE.MeshStandardMaterial({
-        color: '#e8c872', emissive: '#6b5018', emissiveIntensity: 0.35, metalness: 0.45, roughness: 0.38,
+    const body = useMemo(() => new THREE.MeshPhysicalMaterial({
+        color: '#f7f5f2', roughness: 0.42, metalness: 0.02, clearcoat: 0.22, clearcoatRoughness: 0.32, envMapIntensity: 0.55,
     }), []);
-    const stone = useMemo(() => new THREE.MeshStandardMaterial({
-        color: '#f7f4ee', roughness: 0.42, metalness: 0.04,
-    }), []);
-    const rails = [
-        [0, 1.48, 0.2, 0.52, 0.02, 0.02],
-        [0, 0.96, 0.2, 0.52, 0.02, 0.02],
-        [-0.25, 1.22, 0.2, 0.02, 0.52, 0.02],
-        [0.25, 1.22, 0.2, 0.02, 0.52, 0.02],
-    ];
-    return h('group', { position: [0, 0, -1.35] },
-        h('mesh', { position: [0, 0.34, 0], castShadow: true, receiveShadow: true, material: stone },
-            h('boxGeometry', { args: [0.78, 0.68, 0.62] })
+    const shade = useMemo(() => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 128;
+        canvas.height = 128;
+        const ctx = canvas.getContext('2d');
+        const wash = ctx.createRadialGradient(64, 64, 6, 64, 64, 62);
+        wash.addColorStop(0, 'rgba(28, 24, 20, 0.42)');
+        wash.addColorStop(1, 'rgba(28, 24, 20, 0)');
+        ctx.fillStyle = wash;
+        ctx.fillRect(0, 0, 128, 128);
+        const tex = new THREE.CanvasTexture(canvas);
+        return tex;
+    }, []);
+    return h('group', { position: [0, 0, -1.15] },
+        h('mesh', { rotation: [-Math.PI / 2, 0, 0], position: [0, 0.012, 0] },
+            h('planeGeometry', { args: [1.15, 0.7] }),
+            h('meshBasicMaterial', { map: shade, transparent: true, depthWrite: false, toneMapped: false })
         ),
-        h('mesh', { position: [0, 0.7, 0], material: gold },
-            h('boxGeometry', { args: [0.84, 0.035, 0.68] })
+        h('mesh', { position: [0, 1.08, 0], castShadow: true, receiveShadow: true, material: body },
+            h('boxGeometry', { args: [0.48, 2.16, 0.26] })
         ),
-        rails.map((rail, i) => h('mesh', {
-            key: 'rail-' + i,
-            position: [rail[0], rail[1], rail[2]],
-            material: gold,
-        }, h('boxGeometry', { args: [rail[3], rail[4], rail[5]] }))),
-        h('mesh', { position: [0, 1.18, 0.1] },
-            h('boxGeometry', { args: [0.4, 0.42, 0.06] }),
-            h('meshBasicMaterial', { color: '#fff8f0' })
+        h('mesh', { position: [0, 1.14, 0.132] },
+            h('planeGeometry', { args: [0.4, 0.78] }),
+            h('meshBasicMaterial', { color: '#1a2330' })
         ),
-        h('mesh', { position: [0, 1.16, 0.18] },
-            h('sphereGeometry', { args: [0.12, 24, 16] }),
-            h('meshBasicMaterial', { color: '#fffaf4' })
+        kioskText('세종 이루소 봉안당', [0, 1.44, 0.14], 0.032, '#ffffff'),
+        ['봉안함 찾기', '상담 안내', '시설 안내'].map((label, i) => h('group', { key: label },
+            h('mesh', { position: [0, 1.24 - i * 0.16, 0.134] },
+                h('planeGeometry', { args: [0.32, 0.11] }),
+                h('meshBasicMaterial', { color: '#ffffff' })
+            ),
+            kioskText(label, [0, 1.24 - i * 0.16, 0.142], 0.03, '#111111')
+        )),
+        h('mesh', { position: [0, 1.84, 0.132] },
+            h('planeGeometry', { args: [0.44, 0.1] }),
+            h('meshBasicMaterial', { color: '#ffffff' })
         ),
-        h('mesh', { position: [0, 1.3, 0.18] },
-            h('sphereGeometry', { args: [0.06, 18, 12] }),
-            h('meshBasicMaterial', { color: '#fffaf4' })
-        ),
-        h('pointLight', { position: [0, 1.28, 0.2], color: '#fff1dc', intensity: 0.35, distance: 1.4, decay: 2 }),
-        h('mesh', { position: [0, 0.52, 0.32] },
-            h('planeGeometry', { args: [0.46, 0.16] }),
-            h('meshBasicMaterial', { map: plaque })
-        ),
-        h(FlowerBunch)
+        kioskText('추모 안내 키오스크', [0, 1.84, 0.14], 0.034, '#111111')
     );
 }
 
@@ -1017,22 +1294,51 @@ function HallEnv() {
     useEffect(() => {
         const pmrem = new THREE.PMREMGenerator(gl);
         const env = new THREE.Scene();
-        env.add(new THREE.HemisphereLight('#fffdf8', '#f0e6d6', 1.6));
-        const fill = new THREE.DirectionalLight('#fffaf2', 3.4);
-        fill.position.set(0, 8, 1);
-        env.add(fill);
-        const sky = new THREE.Mesh(
-            new THREE.PlaneGeometry(8, 6),
-            new THREE.MeshBasicMaterial({ color: '#fffaf4' })
+        env.add(new THREE.HemisphereLight('#fff8ee', '#b7aea4', 0.55));
+        const key = new THREE.DirectionalLight('#fffaf2', 2.4);
+        key.position.set(1.5, 8, 3);
+        env.add(key);
+        const ceil = new THREE.Mesh(
+            new THREE.PlaneGeometry(16, 16),
+            new THREE.MeshBasicMaterial({ color: '#fffdf8' })
         );
-        sky.position.set(0, 4.2, 0);
-        sky.rotation.x = Math.PI / 2;
-        env.add(sky);
-        const target = pmrem.fromScene(env, 0.04);
+        ceil.position.set(0, 6.2, 0);
+        ceil.rotation.x = Math.PI / 2;
+        env.add(ceil);
+        const lamp = new THREE.Mesh(
+            new THREE.PlaneGeometry(1.1, 9),
+            new THREE.MeshBasicMaterial({ color: '#ffffff' })
+        );
+        lamp.position.set(0, 5.7, 0);
+        lamp.rotation.x = Math.PI / 2;
+        env.add(lamp);
+        const ground = new THREE.Mesh(
+            new THREE.PlaneGeometry(16, 16),
+            new THREE.MeshBasicMaterial({ color: '#7d756c' })
+        );
+        ground.position.set(0, -1.5, 0);
+        ground.rotation.x = -Math.PI / 2;
+        env.add(ground);
+        const sideMat = new THREE.MeshBasicMaterial({ color: '#f4ebe3' });
+        const left = new THREE.Mesh(new THREE.PlaneGeometry(16, 8), sideMat);
+        left.position.set(-7, 2, 0);
+        left.rotation.y = Math.PI / 2;
+        env.add(left);
+        const right = new THREE.Mesh(new THREE.PlaneGeometry(16, 8), sideMat);
+        right.position.set(7, 2, 0);
+        right.rotation.y = -Math.PI / 2;
+        env.add(right);
+        const target = pmrem.fromScene(env, 0.02);
         scene.environment = target.texture;
+        if ('environmentIntensity' in scene) scene.environmentIntensity = 1.2;
         return () => {
+            scene.environment = null;
             target.dispose();
             pmrem.dispose();
+            env.traverse((obj) => {
+                if (obj.geometry) obj.geometry.dispose();
+                if (obj.material && obj.material.dispose) obj.material.dispose();
+            });
         };
     }, [gl, scene]);
     return null;
@@ -1049,27 +1355,32 @@ function showSheet(slot) {
         sheet.hidden = true;
         if (start) start.hidden = false;
         if (stage) stage.classList.remove('is-focused');
+        const panel = document.getElementById('columbInfoPanel');
+        if (panel) panel.style.display = 'none';
         return;
     }
-    sheet.hidden = false;
+    sheet.hidden = true;
     if (start) start.hidden = true;
     if (stage) stage.classList.add('is-focused');
-    const kicker = sheet.querySelector('[data-sheet-kicker]');
-    const title = sheet.querySelector('[data-sheet-title]');
-    const body = sheet.querySelector('[data-sheet-body]');
-    if (kicker) kicker.textContent = roomLabel(slot.cell, slot.r, slot.c);
-    if (title) title.textContent = slot.occupied ? personName(slot.cell) : '분양 가능';
-    if (body) {
-        body.textContent = slot.occupied
-            ? (slot.isPublic ? '공개 추모관입니다. 좌우로 넘기면 옆 호실입니다.' : '안치된 호실입니다. 좌우로 넘기면 옆 호실입니다.')
-            : '이 호실은 분양 상담으로 이어갈 수 있습니다. 좌우로 넘기면 옆 호실입니다.';
-    }
 }
 
 function Scene({ snap, onSelect, concept }) {
     const [hover, setHover] = useState(-1);
     const [focusIndex, setFocusIndex] = useState(-1);
-    const slots = useMemo(() => buildSlots(snap), [snap]);
+    const [focusDepth, setFocusDepth] = useState(0);
+    const [ceilingOn, setCeilingOn] = useState(() => bus.ceilingOn !== false);
+    useEffect(() => {
+        bus.setCeilingOn = (on) => {
+            bus.ceilingOn = on;
+            setCeilingOn(on);
+        };
+        return () => { bus.setCeilingOn = null; };
+    }, []);
+    const packs = useHallFloors(snap);
+    const activeFloor = String((snap && snap.floor) || '1');
+    const order = [activeFloor].concat(['1', '2', '3'].filter((level) => level !== activeFloor));
+    const shifts = [0, -4.2, -8.4];
+    const slots = (packs[activeFloor] && packs[activeFloor].length) ? packs[activeFloor] : [];
     const selected = snap && snap.selected;
     const selectedId = selected ? cellId(
         snap.cells && snap.cells[selected.r + '-' + selected.c],
@@ -1081,20 +1392,26 @@ function Scene({ snap, onSelect, concept }) {
 
     useEffect(() => {
         bus.slots = slots;
-        bus.focusTo = (index) => {
-            if (!slots.length) return;
-            const wrapped = ((index % slots.length) + slots.length) % slots.length;
+        bus.focusTo = (index, rowSlots, depth) => {
+            const list = (rowSlots && rowSlots.length) ? rowSlots : (bus.viewSlots || slots);
+            if (rowSlots && rowSlots.length) bus.viewSlots = rowSlots;
+            if (depth != null) bus.focusDepth = depth;
+            if (!list.length) return;
+            const wrapped = ((index % list.length) + list.length) % list.length;
             bus.focusIndex = wrapped;
             setFocusIndex(wrapped);
-            const slot = slots[wrapped];
+            setFocusDepth(bus.focusDepth || 0);
+            const slot = list[wrapped];
             showSheet(slot);
-            if (onSelect) onSelect(slot);
-            const panel = document.getElementById('columbInfoPanel');
-            if (panel) panel.style.display = 'none';
+            if (bus.api && bus.api.showSlot) bus.api.showSlot(slot);
+            else if (onSelect && !bus.focusDepth) onSelect(slot);
         };
         bus.clearFocus = () => {
             bus.focusIndex = -1;
+            bus.focusDepth = 0;
+            bus.viewSlots = slots;
             setFocusIndex(-1);
+            setFocusDepth(0);
             showSheet(null);
         };
     }, [slots, onSelect]);
@@ -1103,11 +1420,11 @@ function Scene({ snap, onSelect, concept }) {
         h('color', { attach: 'background', args: [(concept || CONCEPTS[0]).marble ? '#f7f6f3' : (concept || CONCEPTS[0]).wall] }),
         h(HallEnv),
         (concept || CONCEPTS[0]).marble ? null : h('fog', { attach: 'fog', args: [(concept || CONCEPTS[0]).wall, 14, 28] }),
-        h('hemisphereLight', { args: ['#fffefb', '#f3ece3', (concept || CONCEPTS[0]).marble ? 0.72 : 0.4] }),
-        h('ambientLight', { color: '#fffaf4', intensity: (concept || CONCEPTS[0]).marble ? 0.38 : (concept || CONCEPTS[0]).amb }),
+        h('hemisphereLight', { args: ['#fffdf8', '#e7e2da', ((concept || CONCEPTS[0]).marble ? 0.42 : 0.4) * (ceilingOn ? 1 : 0.4)] }),
+        h('ambientLight', { color: '#fff6ee', intensity: (concept || CONCEPTS[0]).marble ? 0.16 : (concept || CONCEPTS[0]).amb }),
         h('directionalLight', {
             position: [0.2, 7.2, 3.4],
-            intensity: (concept || CONCEPTS[0]).marble ? 0.85 : 0.45,
+            intensity: ((concept || CONCEPTS[0]).marble ? 0.48 : 0.45) * (ceilingOn ? 1 : 0),
             color: (concept || CONCEPTS[0]).light,
             castShadow: false,
             'shadow-mapSize-width': 2048,
@@ -1123,32 +1440,36 @@ function Scene({ snap, onSelect, concept }) {
         }),
         (concept || CONCEPTS[0]).marble
             ? h(React.Fragment, null,
-                h('pointLight', { position: [-1.15, 2.35, 1.2], color: '#fff1dc', intensity: 0.7, distance: 5.5, decay: 2 }),
-                h('pointLight', { position: [1.15, 2.35, 0.2], color: '#fff1dc', intensity: 0.7, distance: 5.5, decay: 2 }),
-                h('pointLight', { position: [-1.15, 2.35, -2.4], color: '#ffe6c4', intensity: 0.55, distance: 5.5, decay: 2 }),
-                h('pointLight', { position: [1.15, 2.35, -4.6], color: '#ffe6c4', intensity: 0.55, distance: 5.5, decay: 2 })
+                h('pointLight', { position: [-1.6, 1.7, 1.4], color: '#ffd7a8', intensity: 1.15, distance: 4.2, decay: 2 }),
+                h('pointLight', { position: [1.6, 1.7, 0.2], color: '#ffd7a8', intensity: 1.15, distance: 4.2, decay: 2 }),
+                h('pointLight', { position: [-1.6, 1.7, -2.8], color: '#ffe0b8', intensity: 0.9, distance: 4.2, decay: 2 }),
+                h('pointLight', { position: [1.6, 1.7, -5.2], color: '#ffe0b8', intensity: 0.9, distance: 4.2, decay: 2 })
             )
             : h('pointLight', { position: [0, 3.4, 0.2], color: '#ffe3bf', intensity: (concept || CONCEPTS[0]).spot, distance: 12 }),
-        h(Room, { concept }),
+        h(Room, { concept, ceilingOn }),
         h(ModelBoundary, null, h(React.Suspense, { fallback: null }, h(HeroCase))),
         (concept || CONCEPTS[0]).marble ? null : h(CorridorMarks),
-        h(NicheGrid, {
-            slots,
-            hover,
-            selectedId,
-            focusIndex,
-            onHover: setHover,
-            onSelect: (slot) => {
-                const index = slots.findIndex((item) => item.r === slot.r && item.c === slot.c);
-                if (bus.focusTo) bus.focusTo(index);
-            },
-            concept,
-        }),
-        h(NicheGrid, { slots, hover: -1, selectedId: '', focusIndex: -1, onHover: () => {}, onSelect: () => {}, concept, ghost: true, shiftZ: -4.2 }),
-        h(NicheGrid, { slots, hover: -1, selectedId: '', focusIndex: -1, onHover: () => {}, onSelect: () => {}, concept, ghost: true, shiftZ: -8.4 }),
-        h(ModelBoundary, null, h(React.Suspense, { fallback: null }, h(UrnGrid, { slots, concept }))),
-        h(ModelBoundary, null, h(React.Suspense, { fallback: null }, h(UrnGrid, { slots, concept, shiftZ: -4.2 }))),
-        h(ModelBoundary, null, h(React.Suspense, { fallback: null }, h(UrnGrid, { slots, concept, shiftZ: -8.4 }))),
+        ...order.flatMap((level, index) => [
+            h(NicheGrid, {
+                key: 'niche-' + level,
+                slots: packs[level] || [],
+                hover: focusDepth === shifts[index] ? hover : -1,
+                selectedId: focusDepth === shifts[index] ? selectedId : '',
+                focusIndex: focusDepth === shifts[index] ? focusIndex : -1,
+                onHover: (hit) => { if (focusDepth === shifts[index]) setHover(hit); },
+                onSelect: (slot) => {
+                    const list = packs[level] || [];
+                    const hit = list.findIndex((item) => item.r === slot.r && item.c === slot.c);
+                    if (bus.focusTo) bus.focusTo(hit, list, shifts[index]);
+                },
+                concept,
+                shiftZ: shifts[index],
+            }),
+            h(ModelBoundary, { key: 'urn-' + level }, h(React.Suspense, { fallback: null },
+                h(UrnGrid, { slots: packs[level] || [], concept, shiftZ: shifts[index] })
+            )),
+            h(PortraitPlates, { key: 'photo-' + level, slots: packs[level] || [], shiftZ: shifts[index] }),
+        ]),
         h(ConceptProps, { slots, concept }),
         h(GuidedCamera, { focusIndex })
     );
@@ -1165,8 +1486,7 @@ function App() {
         return () => { bus.render = null; };
     }, []);
     const onSelect = (slot) => {
-        if (!slot || !bus.api) return;
-        bus.api.openCell(slot.r, slot.c);
+        if (!slot) return;
         const root = document.getElementById('columbarium-template-root');
         if (root) {
             root.dispatchEvent(new CustomEvent('columbarium-cell', {
@@ -1181,7 +1501,8 @@ function App() {
         camera: { position: [0, 1.52, 4.35], fov: 42, near: 0.08, far: 80 },
         gl: { antialias: true, toneMapping: THREE.ACESFilmicToneMapping },
         onCreated: ({ gl }) => {
-            gl.toneMappingExposure = 1.18;
+            gl.toneMappingExposure = 1.08;
+            gl.outputColorSpace = THREE.SRGBColorSpace;
             gl.shadowMap.type = THREE.PCFSoftShadowMap;
         },
     }, h(Scene, { snap, onSelect, concept }));
@@ -1244,6 +1565,22 @@ function mount(api) {
     bus.api = api;
     const root = document.getElementById('columbarium-template-root');
     if (!root) return;
+    const ceilingBtn = root.querySelector('[data-ceiling-led]');
+    if (ceilingBtn && !ceilingBtn.dataset.bound) {
+        ceilingBtn.dataset.bound = '1';
+        const paintCeiling = () => {
+            const on = bus.ceilingOn !== false;
+            ceilingBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+            ceilingBtn.textContent = on ? '천장등 끄기' : '천장등 켜기';
+        };
+        paintCeiling();
+        ceilingBtn.addEventListener('click', () => {
+            const next = bus.ceilingOn === false;
+            if (bus.setCeilingOn) bus.setCeilingOn(next);
+            else bus.ceilingOn = next;
+            paintCeiling();
+        });
+    }
     const tour = root.querySelector('[data-tour]');
     const gridWrap = root.querySelector('[data-grid-wrap]');
     const conceptSelect = root.querySelector('[data-concept]');
@@ -1274,10 +1611,14 @@ function mount(api) {
         });
     }
     const closeSheet = root.querySelector('[data-sheet-close]');
-    if (closeSheet) {
-        closeSheet.addEventListener('click', () => {
-            if (bus.clearFocus) bus.clearFocus();
-        });
+    const infoClose = document.getElementById('columbInfoClose');
+    const clearTour = () => {
+        if (bus.clearFocus) bus.clearFocus();
+    };
+    if (closeSheet) closeSheet.addEventListener('click', clearTour);
+    if (infoClose && !infoClose.dataset.tourBound) {
+        infoClose.dataset.tourBound = '1';
+        infoClose.addEventListener('click', clearTour);
     }
     root.querySelectorAll('[data-step]').forEach((btn) => {
         btn.addEventListener('click', () => {
