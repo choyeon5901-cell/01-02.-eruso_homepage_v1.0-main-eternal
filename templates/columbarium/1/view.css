@@ -1,0 +1,375 @@
+#columbarium-template-root .material-symbols-outlined {
+    font-family: "Material Symbols Outlined";
+    font-weight: normal;
+    font-style: normal;
+    font-size: 18px;
+    line-height: 1;
+    display: inline-block;
+    vertical-align: middle;
+    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+#columbarium-template-root .s1 {
+    --forest: #1B4332;
+    --forest-mid: #2D6A4F;
+    --forest-soft: #E8F0EC;
+    --amber: #D4A373;
+    --amber-deep: #B08968;
+    --amber-soft: #FDF8F3;
+    --ivory: #FAF8F5;
+    --ivory-2: #F5F1EB;
+    --paper: #F7F4EF;
+    --ink: #2B2D2F;
+    --body: #4A4E51;
+    --muted: #7A7F85;
+    --line: #EBE5DC;
+    color: var(--ink);
+    font-family: "Noto Sans KR", "Noto Sans", sans-serif;
+    background: var(--paper);
+    border-radius: 16px;
+    padding: 28px 22px 22px;
+}
+#columbarium-template-root .s1-head { text-align: center; max-width: 760px; margin: 0 auto 22px; }
+#columbarium-template-root .s1-eyebrow {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 12px; border-radius: 999px;
+    background: var(--forest-soft); border: 1px solid var(--line); color: var(--forest);
+    font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+}
+#columbarium-template-root .s1-title {
+    margin: 10px 0 8px;
+    font-family: "Noto Serif KR", "Noto Serif", serif;
+    font-size: 28px; font-weight: 700; line-height: 1.35; color: var(--ink);
+}
+#columbarium-template-root .s1-lead { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.7; }
+#columbarium-template-root .s1-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: 0 8px 28px -4px rgba(27, 67, 50, 0.08);
+    padding: 22px;
+}
+#columbarium-template-root .s1-banner {
+    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 14px;
+    background: var(--ivory-2); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px;
+}
+#columbarium-template-root .s1-banner-main { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+#columbarium-template-root .s1-chip {
+    padding: 2px 8px; border-radius: 6px; background: var(--forest-soft); color: var(--forest);
+    font-size: 12px; font-weight: 700;
+}
+#columbarium-template-root .s1-chip-amber {
+    background: var(--amber-soft); color: var(--amber-deep); border: 1px solid rgba(212, 163, 115, 0.35);
+}
+#columbarium-template-root .s1-facility {
+    font-family: "Noto Serif KR", serif; font-size: 18px; color: var(--forest);
+}
+#columbarium-template-root .s1-meta { display: inline-flex; align-items: center; gap: 4px; color: var(--body); font-size: 12px; }
+#columbarium-template-root .s1-concept {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 700; color: var(--ink);
+}
+#columbarium-template-root .s1-concept select {
+    height: 32px; max-width: 180px; border-radius: 8px; border: 1px solid var(--line);
+    background: #fff; color: var(--ink); font-size: 12px; padding: 0 8px;
+}
+#columbarium-template-root .s1-modes { display: flex; align-items: center; gap: 8px; }
+#columbarium-template-root .s1-modes-label { font-size: 12px; font-weight: 700; }
+#columbarium-template-root .s1-mode-tabs {
+    display: inline-flex; padding: 4px; border-radius: 8px; background: #fff; border: 1px solid var(--line);
+}
+#columbarium-template-root .s1-mode {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 0; background: transparent; color: var(--body);
+    border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+#columbarium-template-root .s1-mode.is-on { background: var(--forest); color: #fff; }
+#columbarium-template-root .s1-tour {
+    position: relative; margin-top: 18px; border-radius: 16px; overflow: hidden;
+    border: 1px solid rgba(27, 67, 50, 0.2); background: #181512;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+}
+#columbarium-template-root .s1-stage { position: relative; height: 640px; overflow: hidden; background: #1a1612; }
+#columbarium-template-root .s1-webgl { position: absolute; inset: 0; z-index: 1; touch-action: none; }
+#columbarium-template-root .s1-webgl canvas { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+#columbarium-template-root .s1-stage.is-focused::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 26%, rgba(18, 14, 10, 0.5) 100%);
+}
+#columbarium-template-root .s1-island,
+#columbarium-template-root .s1-sheet {
+    position: absolute;
+    z-index: 5;
+    color: #1c1c1e;
+    background: rgba(255, 255, 255, 0.62);
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    box-shadow: 0 12px 32px rgba(28, 24, 18, 0.16);
+    backdrop-filter: blur(22px) saturate(1.45);
+    -webkit-backdrop-filter: blur(22px) saturate(1.45);
+}
+#columbarium-template-root .s1-island-top {
+    top: 14px;
+    left: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 999px;
+    padding: 6px 8px 6px 14px;
+    font-size: 13px;
+    font-weight: 650;
+}
+#columbarium-template-root .s1-icon {
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.45);
+    color: #1c1c1e;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+}
+#columbarium-template-root .s1-start {
+    left: 50%;
+    bottom: 22px;
+    transform: translateX(-50%);
+    border: 0;
+    border-radius: 999px;
+    padding: 12px 22px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
+#columbarium-template-root .s1-start[hidden] { display: none; }
+#columbarium-template-root .s1-sheet {
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+    border-radius: 22px;
+    padding: 14px 16px 16px;
+    animation: s1-sheet-in 0.62s cubic-bezier(0.18, 1.25, 0.32, 1);
+}
+#columbarium-template-root .s1-sheet[hidden] { display: none; }
+#columbarium-template-root .s1-sheet-head { display: flex; justify-content: space-between; align-items: center; }
+#columbarium-template-root .s1-sheet-head p { margin: 0; font-size: 12px; font-weight: 700; color: #6b6258; }
+#columbarium-template-root .s1-sheet strong {
+    display: block;
+    margin-top: 2px;
+    font-family: "Noto Serif KR", serif;
+    font-size: 22px;
+    font-weight: 700;
+}
+#columbarium-template-root .s1-sheet-body, #columbarium-template-root .s1-sheet [data-sheet-body] {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: #4a463f;
+}
+#columbarium-template-root .s1-sheet-nav { display: flex; gap: 8px; margin-top: 12px; }
+#columbarium-template-root .s1-sheet-nav button,
+#columbarium-template-root .s1-sheet-go {
+    border: 0;
+    border-radius: 999px;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+#columbarium-template-root .s1-sheet-nav button { flex: 1; background: rgba(255, 255, 255, 0.55); color: #1c1c1e; }
+#columbarium-template-root .s1-sheet-go {
+    width: 100%;
+    margin-top: 8px;
+    background: #1B4332;
+    color: #fff;
+}
+@keyframes s1-sheet-in {
+    from { transform: translateY(28px) scale(0.98); opacity: 0; }
+    to { transform: none; opacity: 1; }
+}
+#columbarium-template-root .s1-kiosk {
+    width: 148px;
+    padding: 10px 10px 12px;
+    border-radius: 8px;
+    background: linear-gradient(180deg, #243044 0%, #1a2330 100%);
+    color: #f7f4ef;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+    font-family: "Noto Sans KR", sans-serif;
+}
+#columbarium-template-root .s1-kiosk em {
+    display: block;
+    font-style: normal;
+    font-size: 9px;
+    letter-spacing: 0.04em;
+    color: #d9d3c8;
+}
+#columbarium-template-root .s1-kiosk strong {
+    display: block;
+    margin: 6px 0 8px;
+    font-size: 13px;
+}
+#columbarium-template-root .s1-kiosk span {
+    display: block;
+    margin-top: 4px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    font-size: 11px;
+    text-align: center;
+}
+#columbarium-template-root .s1-nameplate {
+    background: rgba(15, 23, 20, 0.92);
+    color: #fff;
+    border: 1px solid rgba(212, 163, 115, 0.5);
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-family: "Noto Sans KR", sans-serif;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: nowrap;
+    pointer-events: none;
+}
+#columbarium-template-root .s1-nameplate strong {
+    display: block;
+    font-family: "Noto Serif KR", serif;
+    font-size: 14px;
+}
+#columbarium-template-root .s1-nameplate em { font-style: normal; color: #fcd34d; font-size: 11px; }
+#columbarium-template-root .s1-hover {
+    position: absolute; z-index: 4; pointer-events: none;
+    transform: translate(-50%, -120%);
+    min-width: 160px; max-width: 240px;
+    padding: 8px 10px; border-radius: 10px;
+    background: rgba(15, 23, 20, 0.92); color: #fff;
+    border: 1px solid rgba(212, 163, 115, 0.45);
+    font-size: 12px; line-height: 1.45;
+}
+#columbarium-template-root .s1-hover strong { display: block; font-family: "Noto Serif KR", serif; font-size: 14px; }
+#columbarium-template-root .s1-hover em { font-style: normal; color: #fcd34d; font-size: 11px; }
+#columbarium-template-root .s1-top,
+#columbarium-template-root .s1-hint,
+#columbarium-template-root .s1-tools { position: absolute; z-index: 3; pointer-events: none; }
+#columbarium-template-root .s1-presets,
+#columbarium-template-root .s1-tool,
+#columbarium-template-root .s1-zoom,
+#columbarium-template-root .s1-zoom button { pointer-events: auto; }
+#columbarium-template-root .s1-top {
+    top: 16px; left: 16px; right: 16px;
+    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px;
+}
+#columbarium-template-root .s1-badges,
+#columbarium-template-root .s1-presets { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+#columbarium-template-root .s1-live,
+#columbarium-template-root .s1-vip,
+#columbarium-template-root .s1-count,
+#columbarium-template-root .s1-presets,
+#columbarium-template-root .s1-hint,
+#columbarium-template-root .s1-tool,
+#columbarium-template-root .s1-zoom {
+    background: rgba(2, 6, 23, 0.82);
+    color: #f8fafc;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 12px;
+    backdrop-filter: blur(8px);
+}
+#columbarium-template-root .s1-live,
+#columbarium-template-root .s1-vip,
+#columbarium-template-root .s1-count {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; font-size: 12px; font-weight: 600;
+}
+#columbarium-template-root .s1-live { color: #fde68a; border-color: rgba(212, 163, 115, 0.45); }
+#columbarium-template-root .s1-count { background: rgba(27, 67, 50, 0.9); color: #d1fae5; border-color: rgba(52, 211, 153, 0.35); }
+#columbarium-template-root .s1-ping {
+    width: 8px; height: 8px; border-radius: 50%; background: #34d399;
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7);
+    animation: s1-ping 1.6s infinite;
+}
+@keyframes s1-ping {
+    70% { box-shadow: 0 0 0 8px rgba(52, 211, 153, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+}
+#columbarium-template-root .s1-presets { padding: 4px; }
+#columbarium-template-root .s1-preset {
+    border: 0; background: transparent; color: #cbd5e1; border-radius: 8px;
+    padding: 4px 10px; font-size: 12px; cursor: pointer;
+}
+#columbarium-template-root .s1-preset.is-on { background: var(--forest); color: #fff; }
+#columbarium-template-root .s1-pin { z-index: 4; }
+#columbarium-template-root .s1-pin-btn {
+    width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--amber);
+    background: var(--forest); color: var(--amber); display: grid; place-items: center; cursor: pointer;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+}
+#columbarium-template-root .s1-pin-btn.is-green { border-color: #34d399; color: #a7f3d0; }
+#columbarium-template-root .s1-pin-btn.is-sale { background: var(--amber); border-color: #fff; color: #1e293b; }
+#columbarium-template-root .s1-pin-btn.is-quiet { width: 28px; height: 28px; background: #0f172a; border-color: rgba(255,255,255,0.7); color: #fff; }
+#columbarium-template-root .s1-tip {
+    position: absolute; left: 50%; bottom: 44px; transform: translateX(-50%);
+    width: 240px; padding: 12px; border-radius: 12px;
+    background: rgba(2, 6, 23, 0.92); color: #fff;
+    border: 1px solid rgba(212, 163, 115, 0.45);
+    opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+}
+#columbarium-template-root .s1-pin.is-right .s1-tip { left: auto; right: 0; transform: none; }
+#columbarium-template-root .s1-pin:hover .s1-tip,
+#columbarium-template-root .s1-pin:focus-within .s1-tip { opacity: 1; pointer-events: auto; }
+#columbarium-template-root .s1-tip-row { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; font-size: 11px; }
+#columbarium-template-root .s1-tip-status { color: #fcd34d; }
+#columbarium-template-root .s1-tip.is-green { border-color: rgba(52, 211, 153, 0.45); }
+#columbarium-template-root .s1-tip.is-green .s1-tip-status { color: #6ee7b7; }
+#columbarium-template-root .s1-tip-name {
+    margin: 0; font-family: "Noto Serif KR", serif; font-size: 14px;
+}
+#columbarium-template-root .s1-tip-sub { margin: 4px 0 0; font-size: 11px; color: #cbd5e1; line-height: 1.5; }
+#columbarium-template-root .s1-tip-go {
+    margin-top: 10px; width: 100%; border: 0; border-radius: 6px; padding: 6px 8px;
+    background: var(--forest); color: #fff; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+#columbarium-template-root .s1-tip-go.is-green { background: #047857; }
+#columbarium-template-root .s1-tip-go.is-sale { background: var(--amber); color: #1e293b; }
+#columbarium-template-root .s1-hint {
+    left: 16px; bottom: 16px; display: flex; gap: 6px; align-items: center;
+    max-width: 420px; padding: 8px 12px; font-size: 12px; color: #e2e8f0;
+}
+#columbarium-template-root .s1-tools { right: 16px; bottom: 16px; display: flex; gap: 8px; align-items: center; }
+#columbarium-template-root .s1-tool,
+#columbarium-template-root .s1-zoom button {
+    border: 0; color: #e2e8f0; background: transparent; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
+}
+#columbarium-template-root .s1-tool { padding: 8px 12px; }
+#columbarium-template-root .s1-tool-icon { padding: 8px; }
+#columbarium-template-root .s1-zoom { display: inline-flex; padding: 2px; }
+#columbarium-template-root .s1-zoom button { padding: 6px; border-radius: 8px; }
+#columbarium-template-root .s1-grid-wrap {
+    margin-top: 18px; background: #0B1512; border-radius: 12px; padding: 18px;
+    border: 1px solid rgba(27, 67, 50, 0.45); overflow-x: auto;
+}
+#columbarium-template-root .s1-grid-caption { margin: 0 0 12px; text-align: center; color: #9ca3af; font-size: 12px; font-weight: 600; }
+#columbarium-template-root .s1-grid {
+    display: grid; grid-template-columns: repeat(10, minmax(52px, 1fr)); gap: 8px; min-width: 680px;
+}
+#columbarium-template-root .s1-cell {
+    border: 0; border-radius: 6px; padding: 8px 4px; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+#columbarium-template-root .s1-cell.is-open { background: #2D6A4F; color: #d1fae5; }
+#columbarium-template-root .s1-cell.is-used { background: #B08968; color: #fff; font-family: "Noto Sans KR", sans-serif; }
+#columbarium-template-root .s1-cell.is-selected { outline: 2px solid #fff; }
+#columbarium-template-root .s1-foot {
+    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px;
+    margin-top: 14px; color: var(--muted); font-size: 12px; align-items: center;
+}
+#columbarium-template-root .s1-foot p { margin: 0; display: flex; align-items: center; gap: 6px; }
+#columbarium-template-root .s1-consult {
+    border: 0; background: transparent; color: var(--forest); font-weight: 700; cursor: pointer; font-size: 12px;
+}
+#columbarium-template-root .is-hidden { display: none !important; }
+@media (max-width: 800px) {
+    #columbarium-template-root .s1-title { font-size: 22px; }
+    #columbarium-template-root .s1-stage { height: 460px; }
+    #columbarium-template-root .s1-hint,
+    #columbarium-template-root .s1-vip,
+    #columbarium-template-root .s1-count { display: none; }
+}
