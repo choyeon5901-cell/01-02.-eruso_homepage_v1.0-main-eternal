@@ -7,13 +7,13 @@
 (function initColumbarium() {
     'use strict';
 
-    const canvas = document.getElementById('columbariumCanvas');
+    if (!document.getElementById('columbariumSection')) return;
+
+    let canvas = null;
+    let ctx = null;
     const infoPanel = document.getElementById('columbInfoPanel');
     const infoContent = document.getElementById('columbInfoContent');
     const infoClose = document.getElementById('columbInfoClose');
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
 
     // ── API base (memorial embed와 동일) ───────────────────────
     const host = (location.hostname || '').toLowerCase();
@@ -45,8 +45,8 @@
     const PAD_LEFT   = 52;
     const PAD_TOP    = 58; // 시설·동층 제목 + 열 번호 여유
     const GAP        = 6;
-    const CELL_W     = Math.floor((canvas.width - PAD_LEFT - 24 - GAP * (COLS - 1)) / COLS);
-    const CELL_H     = Math.floor((canvas.height - PAD_TOP - 24 - GAP * (ROWS - 1)) / ROWS);
+    let CELL_W = 72;
+    let CELL_H = 64;
 
     const COLOR = {
         bg:        '#0f1420',
@@ -109,6 +109,7 @@
         selectedCell = { r, c };
         draw();
         showInfo(r, c);
+        publish();
     }
 
     function renderFloorStats(payload) {
@@ -214,6 +215,7 @@
                 login_url: !isPublic && cell.login_path ? `${appBase}${cell.login_path}` : null,
                 href: go,
                 matched: !!cell.matched,
+                image_url: cell.image_url || null,
                 price: cell.occupied ? null : '상담 문의',
                 columbarium_name: cell.columbarium_name || null,
                 columbarium_kind: cell.columbarium_kind || null,
@@ -233,7 +235,10 @@
             facility_key: facilityKey(),
             _ts: String(Date.now()),
         });
-        if (selectedFacility?.name) p.set('facility_name', selectedFacility.name);
+        const filterName = selectedFacility?.id === 'sejong-columbarium'
+            ? '세종봉안당'
+            : (selectedFacility?.name || '');
+        if (filterName) p.set('facility_name', filterName);
         if (memorialNameFilter) p.set('q', memorialNameFilter);
 
         try {
@@ -270,6 +275,7 @@
             cache[cacheKey()] = data;
             renderFloorStats(payload);
             draw();
+            publish();
 
             if (memorialNameFilter) {
                 const hits = layoutMeta.search_hits || [];
@@ -289,12 +295,32 @@
             if (floorStatsEl) floorStatsEl.textContent = '';
             searchJumpLock = false;
             draw();
+            publish();
             return data;
         }
     }
 
     function getData() {
         return cache[cacheKey()] || emptyGrid();
+    }
+
+    function snapshot() {
+        return {
+            cells: getData(),
+            zone: activeZone,
+            floor: activeFloor,
+            facility: selectedFacility,
+            selected: selectedCell ? { r: selectedCell.r, c: selectedCell.c } : null,
+            rows: ROWS,
+            cols: COLS,
+        };
+    }
+
+    function publish() {
+        const tpl = window.ErusoColumbariumTemplate;
+        if (tpl && typeof tpl.update === 'function') {
+            try { tpl.update(snapshot()); } catch (err) { console.error(err); }
+        }
     }
 
     function clearSlotCache() {
@@ -328,6 +354,7 @@
     }
 
     function draw() {
+        if (!canvas || !ctx) return;
         const W = canvas.width;
         const H = canvas.height;
         const data = getData();
@@ -437,32 +464,51 @@
         return null;
     }
 
-    canvas.addEventListener('mousemove', (e) => {
-        const hit = hitTest(e);
-        const changed = JSON.stringify(hit) !== JSON.stringify(hoverCell);
-        if (changed) { hoverCell = hit; draw(); }
-        canvas.style.cursor = hit ? 'pointer' : 'default';
-    });
+    let canvasBound = false;
+    function bindCanvas() {
+        canvas = document.getElementById('columbariumCanvas');
+        if (!canvas) return false;
+        ctx = canvas.getContext('2d');
+        CELL_W = Math.floor((canvas.width - PAD_LEFT - 24 - GAP * (COLS - 1)) / COLS);
+        CELL_H = Math.floor((canvas.height - PAD_TOP - 24 - GAP * (ROWS - 1)) / ROWS);
+        if (canvasBound) {
+            draw();
+            return true;
+        }
+        canvasBound = true;
+
+        canvas.addEventListener('mousemove', (e) => {
+            const hit = hitTest(e);
+            const changed = JSON.stringify(hit) !== JSON.stringify(hoverCell);
+            if (changed) { hoverCell = hit; draw(); }
+            canvas.style.cursor = hit ? 'pointer' : 'default';
+        });
 
     canvas.addEventListener('mouseleave', () => { hoverCell = null; draw(); });
 
-    canvas.addEventListener('click', (e) => {
-        const hit = hitTest(e);
-        if (!hit) return;
-        selectedCell = hit;
-        draw();
-        showInfo(hit.r, hit.c);
-    });
+        canvas.addEventListener('click', (e) => {
+            const hit = hitTest(e);
+            if (!hit) return;
+            selectedCell = hit;
+            draw();
+            showInfo(hit.r, hit.c);
+            publish();
+        });
 
-    canvas.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        const touch = e.touches[0];
-        const hit = hitTest(touch);
-        if (!hit) return;
-        selectedCell = hit;
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const hit = hitTest(touch);
+            if (!hit) return;
+            selectedCell = hit;
+            draw();
+            showInfo(hit.r, hit.c);
+            publish();
+        }, { passive: false });
+
         draw();
-        showInfo(hit.r, hit.c);
-    }, { passive: false });
+        return true;
+    }
 
     function showInfo(r, c) {
         const key  = `${r}-${c}`;
@@ -478,9 +524,9 @@
 
         const badge = cell.occupied
             ? (cell.is_public
-                ? '<span style="background:rgba(200,169,110,0.85);color:#1a1206;border-radius:6px;padding:2px 10px;font-size:12px;font-weight:800;">사용중</span> <span style="background:rgba(72,180,120,0.9);color:#062818;border-radius:6px;padding:2px 10px;font-size:12px;font-weight:800;">공개</span>'
-                : '<span style="background:rgba(200,169,110,0.85);color:#1a1206;border-radius:6px;padding:2px 10px;font-size:12px;font-weight:800;">사용중</span> <span style="background:rgba(120,120,130,0.85);color:#f0f0f0;border-radius:6px;padding:2px 10px;font-size:12px;font-weight:800;">비공개</span>')
-            : '<span style="background:rgba(48,200,140,0.8);color:#082820;border-radius:6px;padding:2px 10px;font-size:12px;font-weight:800;">분양가능</span>';
+                ? '<span style="background:rgba(200,169,110,0.85);color:#1a1206;border-radius:2px;padding:2px 10px;font-size:12px;font-weight:800;">사용중</span> <span style="background:rgba(72,180,120,0.9);color:#062818;border-radius:2px;padding:2px 10px;font-size:12px;font-weight:800;">공개</span>'
+                : '<span style="background:rgba(200,169,110,0.85);color:#1a1206;border-radius:2px;padding:2px 10px;font-size:12px;font-weight:800;">사용중</span> <span style="background:rgba(120,120,130,0.85);color:#f0f0f0;border-radius:2px;padding:2px 10px;font-size:12px;font-weight:800;">비공개</span>')
+            : '<span style="background:rgba(48,200,140,0.8);color:#082820;border-radius:2px;padding:2px 10px;font-size:12px;font-weight:800;">분양가능</span>';
 
         const detail = cell.occupied
             ? `<p style="margin:10px 0 0;font-size:14px;color:rgba(240,240,240,0.75);"><strong style="font-size:16px;color:#f0f0f0;">${esc(cell.name || cell.title || '—')}</strong></p>
@@ -497,18 +543,18 @@
         if (cell.occupied && goUrl) {
             actions = `<div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);display:flex;justify-content:center;gap:8px;flex-wrap:wrap;">
                 <a href="${esc(goUrl)}" target="_blank" rel="noopener"
-                   style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;background:linear-gradient(135deg,#c8a96e,#a07840);color:#fff;border-radius:8px;font-size:13px;font-weight:800;text-decoration:none;">
+                   style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;background:linear-gradient(135deg,#c8a96e,#a07840);color:#fff;border-radius:2px;font-size:13px;font-weight:800;text-decoration:none;">
                    ${goLabel}
                 </a>
                 <button type="button" data-columb-consult="1"
-                   style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;background:rgba(255,255,255,0.08);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">
+                   style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;background:rgba(255,255,255,0.08);color:#fff;border:none;border-radius:2px;font-size:13px;font-weight:700;cursor:pointer;">
                    상담 신청
                 </button>
               </div>`;
         } else {
             actions = `<div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.08);display:flex;justify-content:center;">
                 <button type="button" data-columb-consult="1"
-                   style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;background:linear-gradient(135deg,#c8a96e,#a07840);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;">
+                   style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;background:linear-gradient(135deg,#c8a96e,#a07840);color:#fff;border:none;border-radius:2px;font-size:13px;font-weight:800;cursor:pointer;">
                    상담 신청
                 </button>
               </div>`;
@@ -572,6 +618,7 @@
             infoPanel.style.display = 'none';
             selectedCell = null;
             draw();
+            publish();
         });
     }
 
@@ -686,7 +733,7 @@
 
     const SEJONG_FACILITY = {
         id: 'sejong-columbarium',
-        name: '세종봉안당',
+        name: '세종 이루소 봉안당',
         kind: 'funeral',
         kindLabel: '테스트·봉안당',
         region: '세종특별자치시',
@@ -694,7 +741,7 @@
         address: '세종특별자치시 조치원읍 장안로 41',
         phone: '010-2960-8688',
         homepage: 'https://www.eruso.co.kr',
-        raw: { _test: true, _partner_key: 'sejong-columbarium', fcltNm: '세종봉안당' },
+        raw: { _test: true, _partner_key: 'sejong-columbarium', fcltNm: '세종 이루소 봉안당' },
     };
 
     function normalizeFuneral(item) {
@@ -718,7 +765,7 @@
     function ensureSejongInList(items, q, region) {
         const list = Array.isArray(items) ? [...items] : [];
         const has = list.some((it) =>
-            it.id === 'sejong-columbarium' || String(it.name || '').includes('세종봉안당')
+            it.id === 'sejong-columbarium' || String(it.name || '').includes('세종 이루소 봉안당')
         );
         if (has) return list;
 
@@ -730,7 +777,7 @@
             || !qn
             || qn.includes('세종')
             || qn.includes('봉안')
-            || '세종봉안당'.includes(qn)
+            || '세종 이루소 봉안당'.includes(qn)
             || rn.includes('세종');
         if (show) list.unshift(SEJONG_FACILITY);
         return list;
@@ -769,7 +816,7 @@
 
     function showPartnerFacilities(statusMsg) {
         const items = [SEJONG_FACILITY];
-        setStatus(statusMsg || '테스트 시설: 세종봉안당');
+        setStatus(statusMsg || '테스트 시설: 세종 이루소 봉안당');
         renderFacilityCards(items, '');
     }
 
@@ -813,7 +860,7 @@
 
         // 조건 없음 → 테스트 파트너(세종봉안당)만 먼저 노출
         if (!q && !region && cat === 'all') {
-            showPartnerFacilities('테스트 시설: 세종봉안당 — 시설명·시도를 입력하면 전체 검색합니다.');
+            showPartnerFacilities('테스트 시설: 세종 이루소 봉안당 — 시설명·시도를 입력하면 전체 검색합니다.');
             return;
         }
 
@@ -889,7 +936,7 @@
         if (!items.length) {
             // API 전부 실패해도 세종봉안당은 보이게
             if (cat !== 'cemetery') {
-                showPartnerFacilities(`검색 결과 없음 — 테스트 시설(세종봉안당)만 표시합니다.${errors.length ? ` (API: ${errors.join(', ')})` : ''}`);
+                showPartnerFacilities(`검색 결과 없음 — 테스트 시설(세종 이루소 봉안당)만 표시합니다.${errors.length ? ` (API: ${errors.join(', ')})` : ''}`);
                 return;
             }
             const errNote = errors.length
@@ -927,7 +974,7 @@
             scheduleSearch();
         } else if (!q) {
             clearTimeout(searchTimer);
-            showPartnerFacilities('테스트 시설: 세종봉안당 — 시설명·시도를 입력하면 전체 검색합니다.');
+            showPartnerFacilities('테스트 시설: 세종 이루소 봉안당 — 시설명·시도를 입력하면 전체 검색합니다.');
         }
     });
 
@@ -965,10 +1012,35 @@
     document.getElementById('columbMemorialSearchBtn')?.addEventListener('click', runMemorialSearch);
     document.getElementById('columbMemorialResetBtn')?.addEventListener('click', resetMemorialSearch);
 
+    window.ErusoColumbarium = {
+        openCell(r, c) {
+            const row = Number(r);
+            const col = Number(c);
+            if (row < 0 || col < 0 || row >= ROWS || col >= COLS) return;
+            selectedCell = { r: row, c: col };
+            draw();
+            showInfo(row, col);
+            publish();
+        },
+        getSnapshot: snapshot,
+        bindCanvas,
+        draw,
+        attach(template) {
+            if (!template) return;
+            window.ErusoColumbariumTemplate = template;
+            if (!template.__mounted) {
+                template.__mounted = true;
+                if (typeof template.mount === 'function') template.mount(window.ErusoColumbarium);
+                if (template.usesCanvas) bindCanvas();
+            }
+            if (typeof template.update === 'function') template.update(snapshot());
+        },
+    };
+
     // ── 최초 렌더: 세종봉안당 기본 선택(스크롤 없이 히어로 영상 유지) + 목록 노출 ──
     draw();
     applyFacility(SEJONG_FACILITY, { scroll: false });
-    showPartnerFacilities('테스트 시설: 세종봉안당 (기본 선택됨)');
+    showPartnerFacilities('테스트 시설: 세종 이루소 봉안당 (기본 선택됨)');
     window.addEventListener('resize', draw);
 
     loadRegions().then(() => {
