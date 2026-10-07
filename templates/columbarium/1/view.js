@@ -1,9 +1,8 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Html, MeshReflectorMaterial, Text } from '@react-three/drei';
-import { Bloom, EffectComposer, SMAA } from '@react-three/postprocessing';
-import { SMAAPreset } from 'postprocessing';
+import { Html, Text } from '@react-three/drei';
+import { Bloom, EffectComposer } from '@react-three/postprocessing';
 import * as THREE from 'three';
 
 const KIOSK_FONT = 'https://cdn.jsdelivr.net/fontsource/fonts/noto-sans-kr@5.2.8/korean-700-normal.ttf';
@@ -59,6 +58,8 @@ const bus = {
     nicheVel: 0,
     ceilingOn: true,
     setCeilingOn: null,
+    walkTo: null,
+    walkHome: null,
 };
 
 function roomLabel(cell, r, c) {
@@ -353,6 +354,11 @@ function PortraitPlates({ slots, shiftZ }) {
     );
 }
 
+const NICHE_GLOW_PUBLIC = new THREE.Color(2.2, 1.78, 1.28);
+const NICHE_GLOW_BASE = new THREE.Color(1, 1, 1);
+const NICHE_LED_PUBLIC = new THREE.Color(1.9, 1.48, 0.82);
+const NICHE_LED_BASE = new THREE.Color(1, 1, 1);
+
 function writeInstances(mesh, slots, hover, selectedId, colorFor, scaleFor) {
     if (!mesh) return;
     const dummy = new THREE.Object3D();
@@ -374,10 +380,13 @@ function appendBox(target, size, position) {
     box.translate(position[0], position[1], position[2]);
     const pos = box.attributes.position;
     const nor = box.attributes.normal;
+    const uv = box.attributes.uv;
     const base = target.positions.length / 3;
+    if (!target.uvs) target.uvs = [];
     for (let i = 0; i < pos.count; i += 1) {
         target.positions.push(pos.getX(i), pos.getY(i), pos.getZ(i));
         target.normals.push(nor.getX(i), nor.getY(i), nor.getZ(i));
+        target.uvs.push(uv.getX(i) * Math.max(size[0], size[2]), uv.getY(i) * size[1]);
     }
     const idx = box.index;
     for (let i = 0; i < idx.count; i += 1) target.indices.push(base + idx.getX(i));
@@ -388,6 +397,7 @@ function geometryFromParts(parts) {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(parts.positions, 3));
     geo.setAttribute('normal', new THREE.Float32BufferAttribute(parts.normals, 3));
+    if (parts.uvs && parts.uvs.length) geo.setAttribute('uv', new THREE.Float32BufferAttribute(parts.uvs, 2));
     geo.setIndex(parts.indices);
     return geo;
 }
@@ -395,9 +405,9 @@ function geometryFromParts(parts) {
 function makeFrameGeometry() {
     const w = CELL_W * 0.98;
     const hh = CELL_H * 0.96;
-    const d = 0.05;
-    const t = 0.03;
-    const z = 0.18;
+    const d = 0.1;
+    const t = 0.04;
+    const z = 0.14;
     const parts = { positions: [], normals: [], indices: [] };
     appendBox(parts, [w, t, d], [0, hh / 2 - t / 2, z]);
     appendBox(parts, [w, t, d], [0, -hh / 2 + t / 2, z]);
@@ -407,11 +417,11 @@ function makeFrameGeometry() {
 }
 
 function makeCavityGeometry() {
-    const w = CELL_W * 0.9;
-    const hh = CELL_H * 0.88;
-    const d = 0.34;
+    const w = CELL_W * 0.94;
+    const hh = CELL_H * 0.92;
+    const d = 0.3;
     const t = 0.02;
-    const zc = -0.02;
+    const zc = -0.07;
     const parts = { positions: [], normals: [], indices: [] };
     appendBox(parts, [w, hh, t], [0, 0, zc - d / 2]);
     appendBox(parts, [w, t, d], [0, hh / 2 - t / 2, zc]);
@@ -498,6 +508,107 @@ function placeLocal(dummy, slot, local, scale) {
     dummy.updateMatrix();
 }
 
+function makeStoneTexture() {
+    const size = 512;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#f4efe8';
+    ctx.fillRect(0, 0, size, size);
+    for (let i = 0; i < 6; i += 1) {
+        const x = Math.random() * size;
+        const y = Math.random() * size;
+        const radius = 80 + Math.random() * 140;
+        const g = ctx.createRadialGradient(x, y, 0, x, y, radius);
+        g.addColorStop(0, 'rgba(214, 196, 176, 0.28)');
+        g.addColorStop(1, 'rgba(244, 239, 232, 0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.lineCap = 'round';
+    for (let v = 0; v < 5; v += 1) {
+        ctx.strokeStyle = 'rgba(168, 142, 116, ' + (0.18 + Math.random() * 0.12) + ')';
+        ctx.lineWidth = 8 + Math.random() * 10;
+        ctx.beginPath();
+        let x = -20;
+        let y = Math.random() * size;
+        ctx.moveTo(x, y);
+        while (x < size + 40) {
+            const nx = x + 80 + Math.random() * 70;
+            const ny = y + (Math.random() - 0.5) * 36;
+            ctx.quadraticCurveTo(x + 40, y + (Math.random() - 0.5) * 16, nx, ny);
+            x = nx;
+            y = ny;
+        }
+        ctx.stroke();
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 8;
+    return tex;
+}
+
+function makeWoodTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#e7c99a';
+    ctx.fillRect(0, 0, 512, 512);
+    for (let y = 0; y < 512; y += 1) {
+        const grain = 168 + Math.sin(y * 0.35) * 10 + Math.sin(y * 0.07) * 8;
+        ctx.fillStyle = 'rgba(' + Math.round(grain + 28) + ',' + Math.round(grain * 0.78) + ',' + Math.round(grain * 0.48) + ',0.35)';
+        ctx.fillRect(0, y, 512, 1);
+    }
+    ctx.strokeStyle = 'rgba(120, 86, 48, 0.28)';
+    ctx.lineWidth = 2;
+    for (let x = 0; x <= 512; x += 128) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, 512);
+        ctx.stroke();
+    }
+    for (let i = 0; i < 180; i += 1) {
+        ctx.fillStyle = 'rgba(110, 78, 42, 0.18)';
+        ctx.fillRect(Math.random() * 512, Math.random() * 512, 2, 1);
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 8;
+    return tex;
+}
+
+function makeLinenTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#e7d7c2';
+    ctx.fillRect(0, 0, 256, 256);
+    for (let y = 0; y < 256; y += 3) {
+        ctx.fillStyle = y % 6 === 0 ? 'rgba(140, 108, 74, 0.16)' : 'rgba(255, 248, 236, 0.12)';
+        ctx.fillRect(0, y, 256, 1);
+    }
+    for (let x = 0; x < 256; x += 4) {
+        ctx.fillStyle = 'rgba(120, 92, 62, 0.07)';
+        ctx.fillRect(x, 0, 1, 256);
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(2, 3);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 8;
+    return tex;
+}
+
 function NicheGrid({ slots, hover, selectedId, focusIndex, onHover, onSelect, concept, ghost, shiftZ }) {
     const frame = useRef(null);
     const glass = useRef(null);
@@ -511,60 +622,65 @@ function NicheGrid({ slots, hover, selectedId, focusIndex, onHover, onSelect, co
     const ledGeo = useMemo(() => new THREE.BoxGeometry(0.1, 0.018, 0.06), []);
     const tabletGeo = useMemo(() => new THREE.BoxGeometry(0.2, 0.128, 0.012), []);
     const tabletTex = useMemo(() => makeTabletTexture(), []);
-    const frameMat = useMemo(() => new THREE.MeshPhysicalMaterial({
-        color: '#f4f1ec', roughness: 0.34, metalness: 0.04, clearcoat: 0.35, clearcoatRoughness: 0.28, envMapIntensity: 0.85,
-    }), []);
+    const oak = useMemo(() => {
+        const tex = makeWoodTexture();
+        tex.repeat.set(1.2, 1.6);
+        return tex;
+    }, []);
+    const frameMat = useMemo(() => new THREE.MeshStandardMaterial({
+        color: '#f0d7b0', map: oak, roughness: 0.75, metalness: 0.1,
+        polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
+    }), [oak]);
     const glassMat = useMemo(() => new THREE.MeshPhysicalMaterial({
         color: '#f4f8fb', roughness: 0.02, metalness: 0.08, transparent: true, opacity: 0.22,
         envMapIntensity: 1.35, depthWrite: false,
     }), []);
-    const glowMat = useMemo(() => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 256;
-        canvas.height = 256;
-        const ctx = canvas.getContext('2d');
-        const wash = ctx.createRadialGradient(128, 70, 10, 128, 140, 180);
-        wash.addColorStop(0, '#fff1d2');
-        wash.addColorStop(0.45, '#f3d2a4');
-        wash.addColorStop(1, '#e4c49a');
-        ctx.fillStyle = wash;
-        ctx.fillRect(0, 0, 256, 256);
-        const tex = new THREE.CanvasTexture(canvas);
-        tex.colorSpace = THREE.SRGBColorSpace;
-        return new THREE.MeshStandardMaterial({
-            color: '#fff6ea', map: tex, emissive: '#e8b56e', emissiveIntensity: 0.45, roughness: 0.72, metalness: 0,
-        });
-    }, []);
-    const ledMat = useMemo(() => new THREE.MeshBasicMaterial({ color: '#fff4dc' }), []);
+    const wood = useMemo(() => makeWoodTexture(), []);
+    const glowMat = useMemo(() => new THREE.MeshStandardMaterial({
+        color: '#f0d7b0', map: wood, emissive: '#e8a86a', emissiveIntensity: 0.14, roughness: 0.75, metalness: 0.1,
+    }), [wood]);
+    const ledMat = useMemo(() => new THREE.MeshStandardMaterial({
+        color: '#07131f',
+        emissive: '#c5e4ff',
+        emissiveIntensity: 4.4,
+        toneMapped: false,
+        roughness: 0.45,
+        metalness: 0,
+    }), []);
     const tabletMat = useMemo(() => new THREE.MeshBasicMaterial({ map: tabletTex }), [tabletTex]);
 
     useLayoutEffect(() => {
         const look = concept || CONCEPTS[0];
-        frameMat.color.set(look.marble ? '#ffffff' : look.frame);
+        frameMat.color.set(look.marble ? '#f0d7b0' : look.frame);
+        frameMat.map = look.marble ? oak : null;
         frameMat.emissive.set('#000000');
         frameMat.emissiveIntensity = 0;
-        frameMat.metalness = look.marble ? 0.04 : Math.max(look.metal, 0.35);
-        frameMat.roughness = look.marble ? 0.32 : look.rough;
-        frameMat.clearcoat = look.marble ? 0.4 : 0.08;
-        frameMat.clearcoatRoughness = look.marble ? 0.22 : 0.4;
-        frameMat.envMapIntensity = look.marble ? 0.9 : 0.8;
+        frameMat.metalness = look.marble ? 0.1 : Math.max(look.metal, 0.35);
+        frameMat.roughness = look.marble ? 0.75 : look.rough;
         glassMat.color.set(look.marble ? '#eef4f8' : '#ffffff');
         glassMat.opacity = look.marble ? 0.18 : 0.08;
         glassMat.metalness = look.marble ? 0.02 : 0;
         glassMat.roughness = look.marble ? 0.28 : 0.12;
         glassMat.envMapIntensity = look.marble ? 0.35 : 0.2;
-        glowMat.color.set(look.marble ? '#e4c49a' : look.wall);
-        glowMat.emissive.set(look.marble ? '#c48448' : '#000000');
-        glowMat.emissiveIntensity = look.marble ? 0.28 : 0.15;
-        glowMat.roughness = look.marble ? 0.9 : 0.72;
-        ledMat.color.set(look.marble ? '#fff6e2' : look.light);
+        glowMat.map = wood;
+        glowMat.color.set(look.marble ? '#f0d7b0' : '#d7b48a');
+        glowMat.emissive.set(look.marble ? '#e8a86a' : '#a87840');
+        glowMat.emissiveIntensity = look.marble ? 0.14 : 0.2;
+        glowMat.roughness = look.marble ? 0.75 : 0.72;
+        glowMat.metalness = look.marble ? 0.1 : 0;
+        glowMat.needsUpdate = true;
         syncNicheFrames();
-    }, [slots, hover, selectedId, focusIndex, concept, frameMat, glassMat, glowMat, ledMat]);
+    }, [slots, hover, selectedId, focusIndex, concept, frameMat, glassMat, glowMat, ledMat, oak, wood]);
 
     const syncNicheFrames = () => {
-        const dim = new THREE.Color('#b7aea2');
-        const base = new THREE.Color('#cfc4b4');
-        const hot = new THREE.Color('#fff4cc');
+        const ledOn = bus.ceilingOn !== false;
+        ledMat.color.set(ledOn ? '#07131f' : '#1c1b19');
+        ledMat.emissive.set(ledOn ? '#c5e4ff' : '#000000');
+        ledMat.emissiveIntensity = ledOn ? 4.4 : 0;
+        ledMat.toneMapped = false;
+        const dim = new THREE.Color('#d7c4a4');
+        const base = new THREE.Color('#ffffff');
+        const hot = new THREE.Color('#fff4e2');
         const focused = focusIndex >= 0;
         writeInstances(frame.current, slots, hover, selectedId, (slot, on, i) => {
             if (i === focusIndex) return hot;
@@ -581,9 +697,16 @@ function NicheGrid({ slots, hover, selectedId, focusIndex, onHover, onSelect, co
             });
             mesh.instanceMatrix.needsUpdate = true;
         };
-        paint(glass.current, [0, 0, 0.2]);
+        paint(glass.current, [0, 0, 0.22]);
         paint(glow.current, [0, 0, 0]);
         paint(led.current, [0, CELL_H * 0.28, 0.02]);
+        const tint = (mesh, pick) => {
+            if (!mesh) return;
+            slots.forEach((slot, i) => mesh.setColorAt(i, pick(slot)));
+            if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+        };
+        tint(glow.current, (slot) => (slot.isPublic ? NICHE_GLOW_PUBLIC : NICHE_GLOW_BASE));
+        tint(led.current, (slot) => (slot.isPublic ? NICHE_LED_PUBLIC : NICHE_LED_BASE));
         if (tablet.current) {
             slots.forEach((slot, i) => {
                 dummy.position.set(0, -30, 0);
@@ -627,6 +750,7 @@ function NicheGrid({ slots, hover, selectedId, focusIndex, onHover, onSelect, co
         h('instancedMesh', {
             ref: glow,
             args: [glowGeo, glowMat, count],
+            receiveShadow: true,
             raycast: () => null,
         }),
         h('instancedMesh', {
@@ -642,6 +766,7 @@ function NicheGrid({ slots, hover, selectedId, focusIndex, onHover, onSelect, co
         h('instancedMesh', {
             ref: glass,
             args: [glassGeo, glassMat, count],
+            userData: { nicheGlass: true, slots, shiftZ: shiftZ || 0 },
             ...glassHandlers,
         })
     );
@@ -734,6 +859,23 @@ function UrnModel({ slot, geo, bodyMat, goldMat }) {
     return h('primitive', { object: root });
 }
 
+function PublicNicheLight({ slot }) {
+    const ref = useRef(null);
+    useLayoutEffect(() => {
+        if (!ref.current) return;
+        const dummy = new THREE.Object3D();
+        placeLocal(dummy, slot, [0, SHELF_Y + 0.18, 0.18], 1);
+        ref.current.position.copy(dummy.position);
+    }, [slot]);
+    return h('pointLight', {
+        ref,
+        color: '#ffe4b8',
+        intensity: 1.15,
+        distance: 1.05,
+        decay: 2,
+    });
+}
+
 function UrnGrid({ slots, concept, shiftZ }) {
     const geo = useMemo(() => makeUrnGeometries(), []);
     const glazeMap = useMemo(() => makeGlazeMap(), []);
@@ -745,6 +887,15 @@ function UrnGrid({ slots, concept, shiftZ }) {
     const goldMat = useMemo(() => new THREE.MeshPhysicalMaterial({
         color: '#e4c57a', roughness: 0.32, metalness: 0.4, clearcoat: 0.16, clearcoatRoughness: 0.28,
         envMapIntensity: 0.28, emissive: '#a87828', emissiveIntensity: 0.22,
+    }), []);
+    const publicBody = useMemo(() => new THREE.MeshPhysicalMaterial({
+        color: '#fffefb', map: glazeMap, roughness: 0.12, metalness: 0, clearcoat: 0.74, clearcoatRoughness: 0.08,
+        envMapIntensity: 0.42, sheen: 0.5, sheenRoughness: 0.18, sheenColor: new THREE.Color('#fff6e8'),
+        emissive: '#fff3d4', emissiveIntensity: 0.68,
+    }), [glazeMap]);
+    const publicGold = useMemo(() => new THREE.MeshPhysicalMaterial({
+        color: '#f0d48a', roughness: 0.26, metalness: 0.42, clearcoat: 0.2, clearcoatRoughness: 0.22,
+        envMapIntensity: 0.32, emissive: '#c4923a', emissiveIntensity: 0.48,
     }), []);
     useLayoutEffect(() => {
         const look = concept || CONCEPTS[0];
@@ -765,13 +916,15 @@ function UrnGrid({ slots, concept, shiftZ }) {
     }, [concept, bodyMat, goldMat]);
     const list = (slots || []).filter((slot) => hasPhoto(slot));
     if (!list.length) return null;
-    return h('group', { position: [0, 0, shiftZ || 0] }, list.map((slot) => h(UrnModel, {
-        key: slot.id + '-' + slot.r + '-' + slot.c,
-        slot,
-        geo,
-        bodyMat,
-        goldMat,
-    })));
+    return h('group', { position: [0, 0, shiftZ || 0] }, list.map((slot) => h(React.Fragment, { key: slot.id + '-' + slot.r + '-' + slot.c },
+        h(UrnModel, {
+            slot,
+            geo,
+            bodyMat: slot.isPublic ? publicBody : bodyMat,
+            goldMat: slot.isPublic ? publicGold : goldMat,
+        }),
+        slot.isPublic ? h(PublicNicheLight, { slot }) : null
+    )));
 }
 
 function Nameplate({ slot }) {
@@ -858,37 +1011,19 @@ function makeMarbleTexture() {
     canvas.width = size;
     canvas.height = size;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#e4d5c4';
+    ctx.fillStyle = '#e6e1d8';
     ctx.fillRect(0, 0, size, size);
-    for (let i = 0; i < 70; i += 1) {
+    for (let i = 0; i < 8; i += 1) {
         const x = Math.random() * size;
         const y = Math.random() * size;
-        const radius = 70 + Math.random() * 180;
+        const radius = 220 + Math.random() * 260;
         const g = ctx.createRadialGradient(x, y, 0, x, y, radius);
-        g.addColorStop(0, 'rgba(120, 98, 74, 0.42)');
-        g.addColorStop(1, 'rgba(228, 213, 196, 0)');
+        g.addColorStop(0, 'rgba(214, 206, 194, 0.16)');
+        g.addColorStop(1, 'rgba(230, 225, 216, 0)');
         ctx.fillStyle = g;
         ctx.beginPath();
         ctx.arc(x, y, radius, 0, Math.PI * 2);
         ctx.fill();
-    }
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    for (let v = 0; v < 16; v += 1) {
-        ctx.strokeStyle = 'rgba(92, 72, 52, ' + (0.38 + Math.random() * 0.28) + ')';
-        ctx.lineWidth = 1.6 + Math.random() * 2.2;
-        ctx.beginPath();
-        let x = Math.random() * size;
-        let y = -20;
-        ctx.moveTo(x, y);
-        while (y < size + 40) {
-            const nx = x + (Math.random() - 0.5) * 90;
-            const ny = y + 70 + Math.random() * 80;
-            ctx.quadraticCurveTo(x + (Math.random() - 0.5) * 40, y + 30, nx, ny);
-            x = nx;
-            y = ny;
-        }
-        ctx.stroke();
     }
     const tex = new THREE.CanvasTexture(canvas);
     tex.wrapS = THREE.RepeatWrapping;
@@ -898,36 +1033,215 @@ function makeMarbleTexture() {
     return tex;
 }
 
-function makePlasterRoughness() {
+function makeAltarVase() {
+    const pts = [
+        new THREE.Vector2(0.001, 0),
+        new THREE.Vector2(0.034, 0.004),
+        new THREE.Vector2(0.03, 0.014),
+        new THREE.Vector2(0.042, 0.06),
+        new THREE.Vector2(0.055, 0.12),
+        new THREE.Vector2(0.046, 0.168),
+        new THREE.Vector2(0.026, 0.198),
+        new THREE.Vector2(0.032, 0.214),
+        new THREE.Vector2(0.024, 0.224),
+    ];
+    const geo = new THREE.LatheGeometry(pts, 40);
+    geo.computeVertexNormals();
+    return geo;
+}
+
+const HALL_FILM_URLS = [
+    'http://127.0.0.1:1200/assets/videos/gateway-human.mp4?v=12024-noletter',
+    'http://127.0.0.1:1200/assets/videos/gateway-pet.mp4?v=12024-hq',
+];
+
+function createFilmReel(urls) {
     const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 256;
+    canvas.width = 1280;
+    canvas.height = 720;
     const ctx = canvas.getContext('2d');
-    const img = ctx.createImageData(256, 256);
-    for (let i = 0; i < img.data.length; i += 4) {
-        const n = 150 + Math.random() * 70;
-        img.data[i] = n;
-        img.data[i + 1] = n;
-        img.data[i + 2] = n;
-        img.data[i + 3] = 255;
+    const grain = document.createElement('canvas');
+    grain.width = 160;
+    grain.height = 160;
+    const gctx = grain.getContext('2d');
+    const dots = gctx.createImageData(160, 160);
+    for (let i = 0; i < dots.data.length; i += 4) {
+        const n = 90 + Math.random() * 140;
+        dots.data[i] = n;
+        dots.data[i + 1] = n;
+        dots.data[i + 2] = n;
+        dots.data[i + 3] = 255;
     }
-    ctx.putImageData(img, 0, 0);
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.wrapS = THREE.RepeatWrapping;
-    tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(5, 8);
-    return tex;
+    gctx.putImageData(dots, 0, 0);
+    const video = document.createElement('video');
+    video.crossOrigin = 'anonymous';
+    video.muted = true;
+    video.defaultMuted = true;
+    video.playsInline = true;
+    video.setAttribute('playsinline', 'true');
+    video.preload = 'auto';
+    video.loop = false;
+    video.setAttribute('data-hall-film', '1');
+    video.style.cssText = 'position:fixed;width:2px;height:2px;opacity:0;pointer-events:none;left:0;bottom:0;';
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.generateMipmaps = false;
+    let index = 0;
+    const playAt = (next) => {
+        index = ((next % urls.length) + urls.length) % urls.length;
+        video.src = urls[index];
+        const pending = video.play();
+        if (pending && typeof pending.catch === 'function') pending.catch(() => {});
+    };
+    const onEnded = () => playAt(index + 1);
+    const motes = Array.from({ length: 14 }, () => ({
+        x: Math.random(),
+        y: Math.random(),
+        r: 0.7 + Math.random() * 1.3,
+        v: 0.00015 + Math.random() * 0.0003,
+    }));
+    const paint = () => {
+        const w = canvas.width;
+        const h = canvas.height;
+        const now = performance.now();
+        ctx.fillStyle = '#100d0a';
+        ctx.fillRect(0, 0, w, h);
+        if (video.readyState >= 2 && video.videoWidth > 0) {
+            const vw = video.videoWidth;
+            const vh = video.videoHeight;
+            const cover = Math.max(w / vw, h / vh);
+            const dw = vw * cover;
+            const dh = vh * cover;
+            ctx.drawImage(video, (w - dw) / 2, (h - dh) / 2, dw, dh);
+        }
+        ctx.save();
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.fillStyle = 'rgba(210, 168, 112, 0.32)';
+        ctx.fillRect(0, 0, w, h);
+        ctx.restore();
+        ctx.save();
+        ctx.globalAlpha = 0.14;
+        ctx.drawImage(grain, (now / 28) % 160 - 160, (now / 41) % 160 - 160, w + 160, h + 160);
+        ctx.restore();
+        motes.forEach((mote) => {
+            mote.y -= mote.v * 16;
+            if (mote.y < 0) mote.y = 1;
+            ctx.fillStyle = 'rgba(255, 236, 206, 0.4)';
+            ctx.beginPath();
+            ctx.arc(mote.x * w, mote.y * h, mote.r, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        if (Math.floor(now / 48) % 3 === 0) {
+            ctx.fillStyle = 'rgba(0,0,0,0.14)';
+            ctx.fillRect(0, 0, w, h);
+        }
+        texture.needsUpdate = true;
+    };
+    return {
+        texture,
+        start() {
+            document.body.appendChild(video);
+            video.addEventListener('ended', onEnded);
+            const kick = () => {
+                if (video.paused) {
+                    const pending = video.play();
+                    if (pending && typeof pending.catch === 'function') pending.catch(() => {});
+                }
+            };
+            video.addEventListener('canplay', kick);
+            playAt(0);
+            window.addEventListener('pointerdown', kick);
+            return () => {
+                window.removeEventListener('pointerdown', kick);
+                video.removeEventListener('ended', onEnded);
+                video.removeEventListener('canplay', kick);
+                video.pause();
+                video.removeAttribute('src');
+                video.load();
+                if (video.parentNode) video.parentNode.removeChild(video);
+                texture.dispose();
+            };
+        },
+        paint,
+    };
+}
+
+function EndAlcove() {
+    const oak = useMemo(() => {
+        const tex = makeWoodTexture();
+        tex.repeat.set(1.4, 1.1);
+        return tex;
+    }, []);
+    const wood = useMemo(() => new THREE.MeshStandardMaterial({
+        color: '#e7d0aa', map: oak, roughness: 0.78, metalness: 0.08,
+    }), [oak]);
+    const woodDark = useMemo(() => new THREE.MeshStandardMaterial({
+        color: '#b48958', map: oak, roughness: 0.82, metalness: 0.06,
+    }), [oak]);
+    const vaseGeo = useMemo(() => makeAltarVase(), []);
+    const ceramic = useMemo(() => new THREE.MeshStandardMaterial({
+        color: '#f3efe8', roughness: 0.46, metalness: 0.04,
+    }), []);
+    const bandMat = useMemo(() => new THREE.MeshStandardMaterial({
+        color: '#c6a36a', roughness: 0.38, metalness: 0.42,
+    }), []);
+    const film = useMemo(() => createFilmReel(HALL_FILM_URLS), []);
+    useEffect(() => film.start(), [film]);
+    useFrame(() => {
+        film.paint();
+    });
+    const topY = 0.78;
+    const leg = (x, z) => h('mesh', {
+        key: 'leg-' + x + '-' + z,
+        position: [x, 0.36, z],
+        castShadow: true,
+        receiveShadow: true,
+        material: woodDark,
+    }, h('boxGeometry', { args: [0.07, 0.72, 0.07] }));
+    const vase = (x) => h('group', { key: 'vase-' + x, position: [x, topY, 0.24] },
+        h('mesh', { geometry: vaseGeo, material: ceramic, castShadow: true, receiveShadow: true }),
+        h('mesh', {
+            position: [0, 0.168, 0],
+            rotation: [Math.PI / 2, 0, 0],
+            material: bandMat,
+            castShadow: true,
+        }, h('torusGeometry', { args: [0.046, 0.004, 10, 28] }))
+    );
+    return h('group', { position: [0, 0, -13.12] },
+        [-0.72, 0.72].flatMap((x) => [0.08, 0.4].map((z) => leg(x, z))),
+        h('mesh', { position: [0, 0.68, 0.24], castShadow: true, receiveShadow: true, material: woodDark },
+            h('boxGeometry', { args: [1.52, 0.1, 0.4] })
+        ),
+        h('mesh', { position: [0, topY - 0.022, 0.24], castShadow: true, receiveShadow: true, material: wood },
+            h('boxGeometry', { args: [1.7, 0.044, 0.5] })
+        ),
+        h('mesh', { position: [0, 2.32, 0.04] },
+            h('planeGeometry', { args: [3.2, 1.8] }),
+            h('meshBasicMaterial', { map: film.texture, toneMapped: false })
+        ),
+        vase(-0.28),
+        vase(0.28)
+    );
 }
 
 function Room({ concept, ceilingOn }) {
     const look = concept || CONCEPTS[0];
     const ledOn = ceilingOn !== false;
-    const plaster = useMemo(() => makePlasterRoughness(), []);
     const floorTex = useMemo(() => {
         const tex = makeMarbleTexture();
         tex.repeat.set(2.2, 2.8);
         return tex;
     }, []);
+    const oakTex = useMemo(() => {
+        const tex = makeWoodTexture();
+        tex.repeat.set(4, 8);
+        return tex;
+    }, []);
+    const oakMat = useMemo(() => new THREE.MeshStandardMaterial({
+        color: '#f2ddb8', map: oakTex, roughness: 0.75, metalness: 0.1,
+    }), [oakTex]);
     const wallTex = useMemo(() => {
         const tex = floorTex.clone();
         tex.repeat.set(1.4, 1.1);
@@ -948,51 +1262,62 @@ function Room({ concept, ceilingOn }) {
         floorMat.clearcoat = look.marble ? 0.65 : 0.05;
         floorMat.clearcoatRoughness = look.marble ? 0.18 : 0.4;
         floorMat.needsUpdate = true;
-        wallMat.color.set(look.marble ? '#f3ece4' : look.wall);
+        wallMat.color.set(look.marble ? '#e6dccb' : look.wall);
         wallMat.map = look.marble ? wallTex : null;
         wallMat.emissive = wallMat.emissive || new THREE.Color();
         wallMat.emissive.set('#000000');
         wallMat.emissiveIntensity = 0;
-        wallMat.roughnessMap = look.marble ? plaster : null;
-        wallMat.roughness = look.marble ? 0.72 : Math.min(0.92, look.rough + 0.08);
-        wallMat.clearcoat = look.marble ? 0.08 : 0;
+        wallMat.roughnessMap = null;
+        wallMat.roughness = look.marble ? 0.86 : Math.min(0.92, look.rough + 0.08);
+        wallMat.clearcoat = 0;
         wallMat.needsUpdate = true;
-    }, [look, floorMat, wallMat, floorTex, wallTex, plaster]);
+    }, [look, floorMat, wallMat, floorTex, wallTex]);
 
     return h('group', null,
         look.marble
-            ? h('mesh', { rotation: [-Math.PI / 2, 0, 0], position: [0, 0.002, -4.6], receiveShadow: true },
-                h('planeGeometry', { args: [7.2, 22] }),
-                h(MeshReflectorMaterial, {
-                    blur: [360, 140],
-                    resolution: 512,
-                    mixBlur: 1,
-                    mixStrength: 0.22,
-                    mixContrast: 0.4,
-                    roughness: 0.72,
-                    depthScale: 0.08,
-                    minDepthThreshold: 0.45,
-                    maxDepthThreshold: 1.05,
-                    color: '#e4d6c6',
-                    metalness: 0.02,
-                    mirror: 0.16,
-                })
+            ? h('mesh', {
+                rotation: [-Math.PI / 2, 0, 0],
+                position: [0, 0.002, -0.55],
+                receiveShadow: true,
+                material: oakMat,
+                userData: { aisleFloor: true },
+                onClick: (event) => {
+                    event.stopPropagation();
+                    if (bus.suppressClick || !bus.walkTo) return;
+                    bus.walkTo(event.point.z);
+                },
+            },
+                h('planeGeometry', { args: [5.56, 25.5] })
             )
-            : h('mesh', { rotation: [-Math.PI / 2, 0, 0], position: [0, 0, 0.15], receiveShadow: true, material: floorMat },
+            : h('mesh', {
+                rotation: [-Math.PI / 2, 0, 0],
+                position: [0, 0, 0.15],
+                receiveShadow: true,
+                material: floorMat,
+                userData: { aisleFloor: true },
+                onClick: (event) => {
+                    event.stopPropagation();
+                    if (bus.suppressClick || !bus.walkTo) return;
+                    bus.walkTo(event.point.z);
+                },
+            },
                 h('planeGeometry', { args: [6.2, 7.2, 12, 12] })
             ),
-        h('mesh', { position: [0, 4.15, look.marble ? -4.6 : -2.2], rotation: [Math.PI / 2, 0, 0], material: wallMat },
-            h('planeGeometry', { args: [7.2, look.marble ? 22 : 16, 8, 8] })
+        h('mesh', { position: [0, 4.15, look.marble ? -0.55 : -2.2], rotation: [Math.PI / 2, 0, 0], receiveShadow: true, material: look.marble ? oakMat : wallMat },
+            h('planeGeometry', { args: [look.marble ? 5.56 : 7.2, look.marble ? 25.5 : 16, 8, 8] })
         ),
-        h('mesh', { position: [-2.72, 2.05, look.marble ? -4.6 : -2.2], material: wallMat },
-            h('boxGeometry', { args: [0.12, 4.15, look.marble ? 22 : 16] })
+        h('mesh', { position: [-2.72, 2.05, look.marble ? -0.55 : -2.2], material: wallMat },
+            h('boxGeometry', { args: [0.12, 4.15, look.marble ? 25.5 : 16] })
         ),
-        h('mesh', { position: [2.72, 2.05, look.marble ? -4.6 : -2.2], material: wallMat },
-            h('boxGeometry', { args: [0.12, 4.15, look.marble ? 22 : 16] })
+        h('mesh', { position: [2.72, 2.05, look.marble ? -0.55 : -2.2], material: wallMat },
+            h('boxGeometry', { args: [0.12, 4.15, look.marble ? 25.5 : 16] })
         ),
         h('mesh', { position: [0, 2.05, look.marble ? -13.2 : -9.2], material: wallMat },
-            h('boxGeometry', { args: [5.6, 4.15, 0.12] })
+            h('boxGeometry', { args: [5.56, 4.15, 0.12] })
         ),
+        look.marble ? h('mesh', { position: [0, 2.05, 12.05], material: wallMat },
+            h('boxGeometry', { args: [5.56, 4.15, 0.18] })
+        ) : null,
         ...(look.marble ? [
             h('mesh', { key: 'skylight', position: [0, 4.11, -4.6], rotation: [Math.PI / 2, 0, 0] },
                 h('planeGeometry', { args: [0.78, 12] }),
@@ -1001,18 +1326,43 @@ function Room({ concept, ceilingOn }) {
                     emissive: ledOn ? '#c5e4ff' : '#000000',
                     emissiveIntensity: ledOn ? 4.4 : 0,
                     toneMapped: false,
-                    roughness: 1,
+                    roughness: 0.45,
                     metalness: 0,
                 })
             ),
-            h('mesh', { key: 'gold-left', position: [-2.55, 0.05, -4.6] },
-                h('boxGeometry', { args: [0.04, 0.06, 18] }),
-                h('meshStandardMaterial', { color: '#c4b29c', roughness: 0.55, metalness: 0.08 })
+            h('mesh', { key: 'base-left', position: [-2.58, 0.09, -0.55] },
+                h('boxGeometry', { args: [0.08, 0.18, 25.2] }),
+                h('meshStandardMaterial', { color: '#c4a06a', map: oakTex, roughness: 0.75, metalness: 0.1, emissive: ledOn ? '#FFAA55' : '#000000', emissiveIntensity: ledOn ? 0.18 : 0 })
             ),
-            h('mesh', { key: 'gold-right', position: [2.55, 0.05, -4.6] },
-                h('boxGeometry', { args: [0.04, 0.06, 18] }),
-                h('meshStandardMaterial', { color: '#c4b29c', roughness: 0.55, metalness: 0.08 })
+            h('mesh', { key: 'base-right', position: [2.58, 0.09, -0.55] },
+                h('boxGeometry', { args: [0.08, 0.18, 25.2] }),
+                h('meshStandardMaterial', { color: '#c4a06a', map: oakTex, roughness: 0.75, metalness: 0.1, emissive: ledOn ? '#FFAA55' : '#000000', emissiveIntensity: ledOn ? 0.18 : 0 })
             ),
+            h('mesh', { key: 'base-end', position: [0, 0.09, -13.08] },
+                h('boxGeometry', { args: [5.2, 0.18, 0.08] }),
+                h('meshStandardMaterial', { color: '#c4a06a', map: oakTex, roughness: 0.75, metalness: 0.1, emissive: ledOn ? '#FFAA55' : '#000000', emissiveIntensity: ledOn ? 0.18 : 0 })
+            ),
+            h('mesh', { key: 'cove-left', position: [-2.58, 3.92, -0.55] },
+                h('boxGeometry', { args: [0.1, 0.1, 25.2] }),
+                h('meshStandardMaterial', { color: '#e7c99a', map: oakTex, roughness: 0.75, metalness: 0.1, emissive: ledOn ? '#FFCC88' : '#000000', emissiveIntensity: ledOn ? 0.28 : 0 })
+            ),
+            h('mesh', { key: 'cove-right', position: [2.58, 3.92, -0.55] },
+                h('boxGeometry', { args: [0.1, 0.1, 25.2] }),
+                h('meshStandardMaterial', { color: '#e7c99a', map: oakTex, roughness: 0.75, metalness: 0.1, emissive: ledOn ? '#FFCC88' : '#000000', emissiveIntensity: ledOn ? 0.28 : 0 })
+            ),
+            h('mesh', { key: 'base-front', position: [0, 0.09, 11.92] },
+                h('boxGeometry', { args: [5.2, 0.18, 0.08] }),
+                h('meshStandardMaterial', { color: '#c4a06a', map: oakTex, roughness: 0.75, metalness: 0.1, emissive: ledOn ? '#FFAA55' : '#000000', emissiveIntensity: ledOn ? 0.18 : 0 })
+            ),
+            h('mesh', { key: 'cove-front', position: [0, 3.92, 11.92] },
+                h('boxGeometry', { args: [5.2, 0.1, 0.1] }),
+                h('meshStandardMaterial', { color: '#e7c99a', map: oakTex, roughness: 0.75, metalness: 0.1, emissive: ledOn ? '#FFCC88' : '#000000', emissiveIntensity: ledOn ? 0.28 : 0 })
+            ),
+            h('mesh', { key: 'cove-end', position: [0, 3.92, -13.08] },
+                h('boxGeometry', { args: [5.2, 0.1, 0.1] }),
+                h('meshStandardMaterial', { color: '#e7c99a', map: oakTex, roughness: 0.75, metalness: 0.1, emissive: ledOn ? '#FFCC88' : '#000000', emissiveIntensity: ledOn ? 0.28 : 0 })
+            ),
+            h(EndAlcove, { key: 'alcove' }),
         ].concat([0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => h('mesh', {
             key: 'spot-' + i,
             position: [0, 4.135, 2.8 - i * 1.25],
@@ -1024,7 +1374,7 @@ function Room({ concept, ceilingOn }) {
                 emissive: ledOn ? '#d6eeff' : '#000000',
                 emissiveIntensity: ledOn ? 6 : 0,
                 toneMapped: false,
-                roughness: 1,
+                roughness: 0.4,
                 metalness: 0,
             })
         ))) : [
@@ -1055,20 +1405,14 @@ function springToward(value, velocity, goal, dt, stiffness, damping) {
     value.z += velocity.z * dt;
 }
 
-function poseFor(index, slots) {
-    if (index < 0 || !slots[index]) {
-        return {
-            pos: new THREE.Vector3(0, 1.88, 7.6),
-            target: new THREE.Vector3(0, 0.42, -4.8),
-        };
-    }
-    const slot = slots[index];
-    const world = slot.position.clone();
-    world.z += bus.focusDepth || 0;
-    const side = world.x > 0 ? 1 : -1;
-    const eye = Math.min(Math.max(world.y, 1.2), 1.85);
-    const pos = new THREE.Vector3(side * 0.28, eye, world.z + 2.45);
-    return { pos, target: world };
+const HALL_EYE_Z = 7.6;
+const YAW_LIMIT = 0.32;
+
+function poseFor() {
+    return {
+        pos: new THREE.Vector3(0, 1.88, HALL_EYE_Z),
+        target: new THREE.Vector3(0, 0.42, -4.8),
+    };
 }
 
 function clampNum(value, min, max) {
@@ -1076,7 +1420,7 @@ function clampNum(value, min, max) {
 }
 
 function GuidedCamera({ focusIndex }) {
-    const { camera, gl } = useThree();
+    const { camera, gl, scene } = useThree();
     const pos = useRef(new THREE.Vector3(0, 1.88, 7.6));
     const target = useRef(new THREE.Vector3(0, 0.42, -4.8));
     const velP = useRef(new THREE.Vector3());
@@ -1103,6 +1447,39 @@ function GuidedCamera({ focusIndex }) {
         el.style.touchAction = 'none';
         const L = look.current;
         const D = drag.current;
+        const raycaster = new THREE.Raycaster();
+        const ndc = new THREE.Vector2();
+        const forward = new THREE.Vector3();
+        bus.walkTo = (z) => {
+            camera.getWorldDirection(forward);
+            const aisle = forward.z < 0 ? -1 : 1;
+            const dolly = aisle < 0 ? (HALL_EYE_Z - z) : (z - HALL_EYE_Z);
+            L.aimDolly = clampNum(dolly, -1.6, 13);
+        };
+        bus.walkHome = () => {
+            L.aimYaw = 0;
+            L.aimPitch = 0;
+            L.aimDolly = 0;
+        };
+        const walkFromPointer = (event) => {
+            if (D.moved > 10 || bus.suppressClick) return;
+            const rect = el.getBoundingClientRect();
+            if (!rect.width || !rect.height) return;
+            ndc.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            ndc.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            raycaster.setFromCamera(ndc, camera);
+            const hits = raycaster.intersectObjects(scene.children, true);
+            if (!hits.length) return;
+            const hit = hits[0];
+            const data = (hit.object && hit.object.userData) || {};
+            if (data.aisleFloor) {
+                bus.walkTo(hit.point.z);
+                return;
+            }
+            if (data.nicheGlass && hit.instanceId != null && data.slots && data.slots[hit.instanceId]) {
+                bus.focusTo(hit.instanceId, data.slots, data.shiftZ || 0);
+            }
+        };
         const down = (event) => {
             if (event.button != null && event.button !== 0) return;
             D.on = true;
@@ -1121,14 +1498,15 @@ function GuidedCamera({ focusIndex }) {
             const dx = clampNum(rawX, -12, 12);
             const dy = clampNum(rawY, -12, 12);
             D.moved += Math.hypot(dx, dy);
-            L.aimYaw = clampNum(L.aimYaw + dx * 0.0048, -Math.PI, Math.PI);
+            L.aimYaw = clampNum(L.aimYaw + dx * 0.0048, -YAW_LIMIT, YAW_LIMIT);
             L.aimPitch = clampNum(L.aimPitch + dy * 0.0048, -1.5, 1.5);
             if (D.moved > 10) bus.suppressClick = true;
         };
-        const up = () => {
+        const up = (event) => {
             if (!D.on) return;
             D.on = false;
             el.style.cursor = 'grab';
+            walkFromPointer(event);
             window.setTimeout(() => { bus.suppressClick = false; }, 90);
         };
         const wheel = (event) => {
@@ -1150,20 +1528,22 @@ function GuidedCamera({ focusIndex }) {
             el.removeEventListener('pointercancel', up);
             el.removeEventListener('pointerleave', leave);
             el.removeEventListener('wheel', wheel);
+            bus.walkTo = null;
+            bus.walkHome = null;
         };
-    }, [gl]);
+    }, [gl, camera, scene]);
 
     useFrame((_, rawDt) => {
         const dt = Math.min(rawDt || 0.016, 0.033);
         const L = look.current;
         if (seenFocus.current !== focusIndex) {
+            const back = focusIndex < 0;
             seenFocus.current = focusIndex;
-            L.yaw = 0;
-            L.pitch = 0;
-            L.dolly = 0;
-            L.aimYaw = 0;
-            L.aimPitch = 0;
-            L.aimDolly = 0;
+            if (back) {
+                L.aimYaw = 0;
+                L.aimPitch = 0;
+                L.aimDolly = 0;
+            }
         }
         const ease = (shown, aim, maxStep) => {
             const gap = aim - shown;
@@ -1173,7 +1553,7 @@ function GuidedCamera({ focusIndex }) {
         L.pitch = ease(L.pitch, L.aimPitch, 0.055);
         L.dolly = ease(L.dolly, L.aimDolly, 0.28);
 
-        const pose = poseFor(focusIndex, bus.slots);
+        const pose = poseFor();
         springToward(pos.current, velP.current, pose.pos, dt, 78, 16);
         springToward(target.current, velT.current, pose.target, dt, 78, 16);
 
@@ -1196,6 +1576,9 @@ function GuidedCamera({ focusIndex }) {
         t.eye.x = clampNum(t.eye.x, -1.45, 1.45);
         t.eye.y = clampNum(t.eye.y, 0.95, 2.25);
         t.eye.z = clampNum(t.eye.z, -5.2, 9.2);
+        if (Math.abs(t.eye.x) < 0.5 && t.eye.y < 2.2 && t.eye.z < -0.7 && t.eye.z > -1.55) {
+            t.eye.z = (t.eye.z > -1.15) ? -0.7 : -1.55;
+        }
         t.aim.copy(t.eye).addScaledVector(t.dir, dist);
         camera.position.copy(t.eye);
         camera.lookAt(t.aim);
@@ -1340,9 +1723,109 @@ function kioskText(label, position, fontSize, color) {
     }, label);
 }
 
+function makeLotusPetal() {
+    const shape = new THREE.Shape();
+    shape.moveTo(0, 0);
+    shape.bezierCurveTo(0.016, 0.018, 0.03, 0.062, 0.01, 0.118);
+    shape.bezierCurveTo(0.004, 0.128, 0, 0.132, 0, 0.132);
+    shape.bezierCurveTo(0, 0.132, -0.004, 0.128, -0.01, 0.118);
+    shape.bezierCurveTo(-0.03, 0.062, -0.016, 0.018, 0, 0);
+    const geo = new THREE.ShapeGeometry(shape, 8);
+    const pos = geo.attributes.position;
+    for (let i = 0; i < pos.count; i += 1) {
+        const y = pos.getY(i);
+        pos.setZ(i, -y * y * 1.35);
+    }
+    geo.computeVertexNormals();
+    return geo;
+}
+
+function makeLotusLeaf() {
+    const shape = new THREE.Shape();
+    shape.moveTo(0, 0);
+    shape.bezierCurveTo(0.045, 0.02, 0.055, 0.09, 0, 0.15);
+    shape.bezierCurveTo(-0.055, 0.09, -0.045, 0.02, 0, 0);
+    const geo = new THREE.ShapeGeometry(shape, 8);
+    const pos = geo.attributes.position;
+    for (let i = 0; i < pos.count; i += 1) {
+        const y = pos.getY(i);
+        pos.setZ(i, -y * y * 0.55);
+    }
+    geo.computeVertexNormals();
+    return geo;
+}
+
+function makeLotusPod() {
+    const pts = [
+        new THREE.Vector2(0.001, 0),
+        new THREE.Vector2(0.011, 0.003),
+        new THREE.Vector2(0.015, 0.01),
+        new THREE.Vector2(0.013, 0.018),
+        new THREE.Vector2(0.006, 0.022),
+        new THREE.Vector2(0.001, 0.024),
+    ];
+    return new THREE.LatheGeometry(pts, 18);
+}
+
+function lotusBloom(petalGeo, leafGeo, podGeo, mats, prefix) {
+    const rings = [
+        { n: 12, radius: 0.006, tilt: 1.42, y: 0, mat: mats.outer, spin: 0 },
+        { n: 9, radius: 0.003, tilt: 1.02, y: 0.01, mat: mats.mid, spin: 0.22 },
+        { n: 6, radius: 0.001, tilt: 0.55, y: 0.02, mat: mats.inner, spin: 0.4 },
+    ];
+    const nodes = [];
+    rings.forEach((ring, ri) => {
+        for (let i = 0; i < ring.n; i += 1) {
+            const a = (i / ring.n) * Math.PI * 2 + ring.spin;
+            nodes.push(h('mesh', {
+                key: prefix + '-p-' + ri + '-' + i,
+                geometry: petalGeo,
+                material: ring.mat,
+                position: [Math.cos(a) * ring.radius, ring.y, Math.sin(a) * ring.radius],
+                rotation: [ring.tilt, a, 0],
+                castShadow: true,
+            }));
+        }
+    });
+    nodes.push(h('mesh', {
+        key: prefix + '-pod',
+        geometry: podGeo,
+        material: mats.pod,
+        position: [0, 0.03, 0],
+        castShadow: true,
+    }));
+    [[0.5, 1.15], [2.6, 1.25], [4.4, 1.08]].forEach((leaf, i) => {
+        nodes.push(h('mesh', {
+            key: prefix + '-leaf-' + i,
+            geometry: leafGeo,
+            material: mats.leaf,
+            position: [Math.cos(leaf[0]) * 0.018, -0.012, Math.sin(leaf[0]) * 0.018],
+            rotation: [leaf[1], leaf[0], 0.15],
+            castShadow: true,
+        }));
+    });
+    return nodes;
+}
+
 function HeroCase() {
-    const body = useMemo(() => new THREE.MeshPhysicalMaterial({
-        color: '#f7f5f2', roughness: 0.42, metalness: 0.02, clearcoat: 0.22, clearcoatRoughness: 0.32, envMapIntensity: 0.55,
+    const oak = useMemo(() => makeWoodTexture(), []);
+    const body = useMemo(() => new THREE.MeshStandardMaterial({
+        color: '#f0d7b0', map: oak, roughness: 0.75, metalness: 0.1,
+    }), [oak]);
+    const plinthMat = useMemo(() => new THREE.MeshStandardMaterial({
+        color: '#e4c48e', map: oak, roughness: 0.78, metalness: 0.1,
+    }), [oak]);
+    const screenMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#1a2330', roughness: 0.62, metalness: 0.04 }), []);
+    const paperMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#f7f4ef', roughness: 0.72 }), []);
+    const petalGeo = useMemo(() => makeLotusPetal(), []);
+    const leafGeo = useMemo(() => makeLotusLeaf(), []);
+    const podGeo = useMemo(() => makeLotusPod(), []);
+    const lotusMats = useMemo(() => ({
+        outer: new THREE.MeshStandardMaterial({ color: '#ecd4c6', roughness: 0.72, metalness: 0.02, side: THREE.DoubleSide }),
+        mid: new THREE.MeshStandardMaterial({ color: '#f7efe6', roughness: 0.68, metalness: 0.02, side: THREE.DoubleSide }),
+        inner: new THREE.MeshStandardMaterial({ color: '#fbf6ef', roughness: 0.64, metalness: 0.02, side: THREE.DoubleSide }),
+        pod: new THREE.MeshStandardMaterial({ color: '#c9a15a', roughness: 0.58, metalness: 0.08 }),
+        leaf: new THREE.MeshStandardMaterial({ color: '#5d7354', roughness: 0.78, metalness: 0.02, side: THREE.DoubleSide }),
     }), []);
     const shade = useMemo(() => {
         const canvas = document.createElement('canvas');
@@ -1362,26 +1845,45 @@ function HeroCase() {
             h('planeGeometry', { args: [1.15, 0.7] }),
             h('meshBasicMaterial', { map: shade, transparent: true, depthWrite: false, toneMapped: false })
         ),
-        h('mesh', { position: [0, 1.08, 0], castShadow: true, receiveShadow: true, material: body },
-            h('boxGeometry', { args: [0.48, 2.16, 0.26] })
+        h('mesh', { position: [0, 0.07, 0], castShadow: true, receiveShadow: true, material: plinthMat },
+            h('boxGeometry', { args: [0.62, 0.14, 0.42] })
         ),
-        h('mesh', { position: [0, 1.14, 0.132] },
-            h('planeGeometry', { args: [0.4, 0.78] }),
-            h('meshBasicMaterial', { color: '#1a2330' })
+        h('mesh', { position: [0, 1.05, 0], castShadow: true, receiveShadow: true, material: body },
+            h('boxGeometry', { args: [0.48, 1.82, 0.32] })
         ),
-        kioskText('세종 이루소 봉안당', [0, 1.44, 0.14], 0.032, '#ffffff'),
+        h('mesh', { position: [0, 1.988, 0], castShadow: true, receiveShadow: true, material: plinthMat },
+            h('boxGeometry', { args: [0.56, 0.05, 0.38] })
+        ),
+        h('mesh', { position: [0, 1.02, 0.168], castShadow: true, material: screenMat },
+            h('boxGeometry', { args: [0.36, 0.92, 0.012] })
+        ),
+        kioskText('세종 이루소 봉안당', [0, 1.36, 0.182], 0.028, '#ffffff'),
         ['봉안함 찾기', '상담 안내', '시설 안내'].map((label, i) => h('group', { key: label },
-            h('mesh', { position: [0, 1.24 - i * 0.16, 0.134] },
-                h('planeGeometry', { args: [0.32, 0.11] }),
-                h('meshBasicMaterial', { color: '#ffffff' })
+            h('mesh', { position: [0, 1.14 - i * 0.2, 0.182], castShadow: true, material: paperMat },
+                h('boxGeometry', { args: [0.3, 0.12, 0.012] })
             ),
-            kioskText(label, [0, 1.24 - i * 0.16, 0.142], 0.03, '#111111')
+            kioskText(label, [0, 1.14 - i * 0.2, 0.194], 0.026, '#111111')
         )),
-        h('mesh', { position: [0, 1.84, 0.132] },
-            h('planeGeometry', { args: [0.44, 0.1] }),
-            h('meshBasicMaterial', { color: '#ffffff' })
+        h('mesh', { position: [0, 1.72, 0.17], castShadow: true, material: paperMat },
+            h('boxGeometry', { args: [0.4, 0.12, 0.012] })
         ),
-        kioskText('추모 안내 키오스크', [0, 1.84, 0.14], 0.034, '#111111')
+        kioskText('추모 안내 키오스크', [0, 1.72, 0.182], 0.026, '#111111'),
+        [-0.78, 0.78].map((x) => h('group', { key: 'planter-' + x, position: [x, 0, 0.28] },
+            h('mesh', { position: [0, 0.16, 0], castShadow: true, receiveShadow: true, material: plinthMat },
+                h('boxGeometry', { args: [0.34, 0.32, 0.3] })
+            ),
+            h('mesh', { position: [0, 0.5, 0], castShadow: true },
+                h('cylinderGeometry', { args: [0.016, 0.022, 0.34, 20] }),
+                h('meshStandardMaterial', { color: '#f4f1ea', roughness: 0.38, metalness: 0.06 })
+            ),
+            h('mesh', { position: [0, 0.68, 0], castShadow: true },
+                h('cylinderGeometry', { args: [0.024, 0.016, 0.02, 20] }),
+                h('meshStandardMaterial', { color: '#f4f1ea', roughness: 0.38, metalness: 0.06 })
+            ),
+            h('group', { position: [0, 0.7, 0], scale: 1.55 },
+                lotusBloom(petalGeo, leafGeo, podGeo, lotusMats, 'lotus-' + x)
+            )
+        ))
     );
 }
 
@@ -1497,6 +1999,9 @@ function Scene({ snap, onSelect, concept }) {
             setFocusIndex(wrapped);
             setFocusDepth(bus.focusDepth || 0);
             const slot = list[wrapped];
+            if (slot && slot.position && bus.walkTo) {
+                bus.walkTo(slot.position.z + (bus.focusDepth || 0));
+            }
             showSheet(slot);
             if (bus.api && bus.api.showSlot) bus.api.showSlot(slot);
             else if (onSelect && !bus.focusDepth) onSelect(slot);
@@ -1508,6 +2013,7 @@ function Scene({ snap, onSelect, concept }) {
             setFocusIndex(-1);
             setFocusDepth(0);
             showSheet(null);
+            if (bus.walkHome) bus.walkHome();
         };
     }, [slots, onSelect]);
 
@@ -1515,30 +2021,32 @@ function Scene({ snap, onSelect, concept }) {
         h('color', { attach: 'background', args: [(concept || CONCEPTS[0]).marble ? '#e6ddd2' : (concept || CONCEPTS[0]).wall] }),
         h(HallEnv),
         (concept || CONCEPTS[0]).marble ? null : h('fog', { attach: 'fog', args: [(concept || CONCEPTS[0]).wall, 14, 28] }),
-        h('hemisphereLight', { args: ['#f6efe6', '#cbbba6', ((concept || CONCEPTS[0]).marble ? 0.28 : 0.4) * (ceilingOn ? 1 : 0.4)] }),
-        h('ambientLight', { color: '#fff6ee', intensity: (concept || CONCEPTS[0]).marble ? 0.16 : (concept || CONCEPTS[0]).amb }),
+        h('hemisphereLight', { args: ['#ffe0b8', '#c4a574', ((concept || CONCEPTS[0]).marble ? 0.22 : 0.4) * (ceilingOn ? 1 : 0.4)] }),
+        h('ambientLight', { color: '#FFAA55', intensity: ((concept || CONCEPTS[0]).marble ? 0.42 : (concept || CONCEPTS[0]).amb) * (ceilingOn ? 1 : 0.45) }),
         h('directionalLight', {
-            position: [0.2, 7.2, 3.4],
-            intensity: ((concept || CONCEPTS[0]).marble ? 0.48 : 0.45) * (ceilingOn ? 1 : 0),
-            color: (concept || CONCEPTS[0]).light,
-            castShadow: false,
+            position: [1.4, 8.4, 1.2],
+            intensity: ((concept || CONCEPTS[0]).marble ? 0.72 : 0.45) * (ceilingOn ? 1 : 0),
+            color: '#ffe0b8',
+            castShadow: true,
             'shadow-mapSize-width': 2048,
             'shadow-mapSize-height': 2048,
             'shadow-camera-near': 0.5,
-            'shadow-camera-far': 24,
-            'shadow-camera-left': -6,
-            'shadow-camera-right': 6,
-            'shadow-camera-top': 6,
-            'shadow-camera-bottom': -6,
-            'shadow-bias': -0.0008,
-            'shadow-normalBias': 0.04,
+            'shadow-camera-far': 36,
+            'shadow-camera-left': -8,
+            'shadow-camera-right': 8,
+            'shadow-camera-top': 14,
+            'shadow-camera-bottom': -14,
+            'shadow-bias': -0.0006,
+            'shadow-normalBias': 0.03,
         }),
         (concept || CONCEPTS[0]).marble
             ? h(React.Fragment, null,
-                h('pointLight', { position: [-1.6, 1.7, 1.4], color: '#ffd7a8', intensity: 1.15, distance: 4.2, decay: 2 }),
-                h('pointLight', { position: [1.6, 1.7, 0.2], color: '#ffd7a8', intensity: 1.15, distance: 4.2, decay: 2 }),
-                h('pointLight', { position: [-1.6, 1.7, -2.8], color: '#ffe0b8', intensity: 0.9, distance: 4.2, decay: 2 }),
-                h('pointLight', { position: [1.6, 1.7, -5.2], color: '#ffe0b8', intensity: 0.9, distance: 4.2, decay: 2 })
+                [2.4, 0.2, -2.2, -4.6].flatMap((z) => [
+                    h('pointLight', { key: 'cove-lo-' + z, position: [-2.2, 0.42, z], color: '#FFAA55', intensity: ceilingOn ? 0.7 : 0.05, distance: 3.4, decay: 2 }),
+                    h('pointLight', { key: 'cove-ro-' + z, position: [2.2, 0.42, z], color: '#FFAA55', intensity: ceilingOn ? 0.7 : 0.05, distance: 3.4, decay: 2 }),
+                    h('pointLight', { key: 'cove-hi-' + z, position: [-2.2, 2.65, z], color: '#FFCC88', intensity: ceilingOn ? 0.45 : 0, distance: 3.6, decay: 2 }),
+                    h('pointLight', { key: 'cove-up-' + z, position: [2.2, 2.65, z], color: '#FFCC88', intensity: ceilingOn ? 0.45 : 0, distance: 3.6, decay: 2 }),
+                ])
             )
             : h('pointLight', { position: [0, 3.4, 0.2], color: '#ffe3bf', intensity: (concept || CONCEPTS[0]).spot, distance: 12 }),
         h(Room, { concept, ceilingOn }),
@@ -1567,15 +2075,14 @@ function Scene({ snap, onSelect, concept }) {
         ]),
         h(ConceptProps, { slots, concept }),
         h(GuidedCamera, { focusIndex }),
-        h(EffectComposer, { disableNormalPass: true, multisampling: 0, resolutionScale: 1 },
+        h(EffectComposer, { disableNormalPass: true, multisampling: 8, resolutionScale: 1.5 },
             h(Bloom, {
                 mipmapBlur: true,
                 luminanceThreshold: 0.9,
                 luminanceSmoothing: 0.42,
                 intensity: ceilingOn ? 1.85 : 0,
                 radius: 0.92,
-            }),
-            h(SMAA, { preset: SMAAPreset.ULTRA })
+            })
         )
     );
 }
@@ -1631,6 +2138,7 @@ function paintDom(snap) {
     grid.innerHTML = '';
     const rows = snap.rows || 6;
     const cols = snap.cols || 10;
+    const cells = (snap && snap.cells) || {};
     for (let r = 0; r < rows; r += 1) {
         for (let c = 0; c < cols; c += 1) {
             const cell = cells[r + '-' + c] || { occupied: false };
