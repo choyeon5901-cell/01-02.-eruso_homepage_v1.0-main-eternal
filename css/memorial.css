@@ -274,6 +274,8 @@ button {
 .nav-menu a span {
     max-width: 100%;
     word-break: keep-all;
+    overflow: visible;
+    line-height: 1.3;
 }
 
 .nav-menu a:hover,
@@ -300,7 +302,7 @@ button {
     display: none;
 }
 
-/* nav-right: 핵심 CTA 3개 + 햄버거 */
+/* nav-right: 핵심 CTA + 햄버거 */
 .nav-right {
     display: flex;
     align-items: center;
@@ -309,6 +311,8 @@ button {
     justify-self: end;
     z-index: 2;
     min-width: 0;
+    max-width: 100%;
+    overflow: visible;
 }
 
 
@@ -3202,6 +3206,28 @@ button {
 }
 .nav-quick i { color: var(--amber); }
 
+.nav-quick[data-nav-quick^="garden-"] {
+    overflow: visible;
+}
+.nav-quick-label {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    line-height: 1.2;
+    min-width: 0;
+}
+.nav-quick-kicker {
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(23, 108, 104, 0.72);
+    letter-spacing: -0.02em;
+}
+.nav-quick-name {
+    font-size: 13px;
+    font-weight: 800;
+}
+
 .nav-board {
     display: inline-flex;
     align-items: center;
@@ -3226,12 +3252,21 @@ button {
     background: rgba(199, 166, 91, 0.16);
 }
 
+@media (max-width: 1280px) {
+    .nav-quick[data-nav-quick="signup"] {
+        display: none;
+    }
+}
+
 @media (max-width: 1100px) {
     .brand-service {
         display: none;
     }
     .nav-inner {
         grid-template-columns: auto 1fr;
+    }
+    .nav-quick[data-nav-quick="memorial"] {
+        display: none;
     }
 }
 
@@ -3270,6 +3305,14 @@ button {
         content: "추모관";
         font-size: 12px;
     }
+    .nav-quick[data-nav-quick="garden-pet"] .nav-quick-kicker,
+    .nav-quick[data-nav-quick="garden-human"] .nav-quick-kicker {
+        display: none;
+    }
+    .nav-quick[data-nav-quick="garden-pet"] .nav-quick-name,
+    .nav-quick[data-nav-quick="garden-human"] .nav-quick-name {
+        font-size: 12px;
+    }
 }
 /* ============================================================
    봉안당 Canvas 뷰어 — 2026-06-16
@@ -3277,9 +3320,17 @@ button {
 .columbarium-viewer {
     background: linear-gradient(145deg, #1a1f2e, #0f1420);
     border-radius: var(--radius);
-    padding: 24px;
+    padding: 12px 14px 10px;
     box-shadow: 0 20px 60px rgba(0,0,0,0.35);
     position: relative;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+.columbarium-viewer:has(#columbarium-template-root[data-template]) {
+    height: auto;
+    max-height: none;
+    overflow: visible;
 }
 
 .columb-toolbar {
@@ -3305,10 +3356,10 @@ button {
     gap: 8px;
     flex: 1 1 auto;
     min-width: 0;
-    height: 40px;
+    height: 48px;
     padding: 0 12px;
     box-sizing: border-box;
-    border-radius: var(--radius);
+    border-radius: 6px;
     background: rgba(0, 0, 0, 0.28);
     border: 1px solid rgba(255, 255, 255, 0.12);
 }
@@ -3325,7 +3376,7 @@ button {
     border: none;
     background: transparent;
     color: #f0f0f0;
-    font-size: 13px;
+    font-size: 16px;
     outline: none;
 }
 
@@ -3335,11 +3386,12 @@ button {
 
 .columb-toolbar__btn {
     flex: 0 0 auto;
-    height: 40px;
-    padding: 0 12px;
-    border-radius: var(--radius);
+    height: 48px;
+    min-width: 72px;
+    padding: 0 16px;
+    border-radius: 6px;
     border: 1px solid rgba(255, 255, 255, 0.14);
-    font-size: 13px;
+    font-size: 16px;
     font-weight: 700;
     cursor: pointer;
     white-space: nowrap;
@@ -3347,8 +3399,8 @@ button {
 }
 
 .columb-toolbar__btn--search {
-    background: linear-gradient(135deg, #c8a96e, #a07840);
-    border-color: transparent;
+    background: #1B4332;
+    border-color: #1B4332;
     color: #fff;
 }
 
@@ -3366,6 +3418,21 @@ button {
     color: #c8a96e;
 }
 
+.columb-hall-scope {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 0 16px;
+    border-radius: 6px;
+    background: #1B4332;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+
 .columb-zone-tabs,
 .columb-floor-tabs {
     display: flex;
@@ -3378,12 +3445,13 @@ button {
 
 .columb-zone-tab,
 .columb-floor-tab {
-    padding: 8px 16px;
-    border-radius: var(--radius);
+    min-height: 48px;
+    padding: 0 16px;
+    border-radius: 6px;
     border: none;
     background: transparent;
     color: rgba(255,255,255,0.55);
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.18s;
@@ -3391,45 +3459,135 @@ button {
 
 .columb-zone-tab.active,
 .columb-floor-tab.active {
-    background: linear-gradient(135deg, #c8a96e, #a07840);
+    background: #1B4332;
     color: #fff;
-    box-shadow: 0 4px 12px rgba(200,169,110,0.35);
+    box-shadow: none;
 }
 
 .columb-legend {
     display: flex;
     align-items: center;
-    gap: 12px;
-    font-size: 13px;
-    color: rgba(255,255,255,0.6);
-    flex: 0 0 auto;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    font-size: 16px;
+    color: rgba(255,255,255,0.92);
+    flex: 0 1 auto;
     margin-left: auto;
 }
 
-.columb-legend-dot {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border-radius: var(--radius);
-    margin-right: 4px;
+.columb-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
 }
-.columb-legend-dot.occupied  { background: rgba(200,169,110,0.8); }
-.columb-legend-dot.available { background: rgba(60,200,140,0.7); }
-.columb-legend-dot.selected  { background: #fff; }
+
+.columb-legend-swatch {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    border-radius: 2px;
+    box-sizing: border-box;
+    flex: 0 0 auto;
+}
+.columb-legend-swatch.is-open,
+.columb-legend-swatch.is-private,
+.columb-legend-swatch.is-public,
+.columb-legend-swatch.is-picked {
+    border: 0;
+    box-shadow: none;
+}
+.columb-legend-swatch.is-open { background: #c8f5dc; }
+.columb-legend-swatch.is-private { background: #e6d7c3; }
+.columb-legend-swatch.is-public { background: #f3ddb0; }
+.columb-legend-swatch.is-picked { background: #1B4332; }
 
 .columb-info-panel {
     position: absolute;
-    bottom: 90px;
-    right: 24px;
-    width: min(340px, calc(100% - 48px));
+    top: auto;
+    bottom: 44px;
+    right: 12px;
+    width: min(392px, calc(100% - 24px));
+    max-height: none;
+    overflow: hidden;
     background: rgba(10,22,40,0.97);
     border: 1px solid rgba(200,169,110,0.4);
-    border-radius: var(--radius);
-    padding: 20px 22px;
+    border-radius: 6px;
+    padding: 10px 52px 10px 12px;
     color: #f0f0f0;
     box-shadow: 0 12px 40px rgba(0,0,0,0.5);
-    z-index: 5;
+    z-index: 30;
     animation: columb-slide-in 0.18s ease;
+}
+.columb-info-place {
+    margin: 0 0 4px;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.2;
+    color: #e7d7b4;
+}
+.columb-info-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.columb-info-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0 8px;
+    border-radius: 2px;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+.columb-info-badge.is-used { background: #c8a96e; color: #1a1206; }
+.columb-info-badge.is-public { background: #1B4332; color: #fff; }
+.columb-info-badge.is-private { background: #5c5c66; color: #fff; }
+.columb-info-badge.is-open { background: #143024; color: #c8f5dc; }
+.columb-info-name {
+    margin: 6px 0 0;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: #f0f0f0;
+}
+.columb-info-meta {
+    margin: 2px 0 0;
+    font-size: 16px;
+    line-height: 1.25;
+    color: rgba(240,240,240,0.86);
+}
+.columb-info-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+.columb-info-go,
+.columb-info-consult {
+    display: inline-flex;
+    flex: 1 1 0;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 0 8px;
+    border: 0;
+    border-radius: 2px;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.columb-info-go {
+    background: #1B4332;
+    color: #fff;
+}
+.columb-info-consult {
+    background: #f6f1e8;
+    color: #1B4332;
 }
 
 @keyframes columb-slide-in {
@@ -3437,39 +3595,111 @@ button {
     to   { opacity:1; transform: translateY(0); }
 }
 
+.columbarium-viewer[data-aim-side="right"] .columb-info-panel {
+    right: auto;
+    left: 16px;
+}
+
+.columb-tribute {
+    margin-top: 8px;
+}
+.columb-tribute__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 48px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 2px;
+    background: #1B4332;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.2;
+    cursor: pointer;
+}
+.columb-tribute__btn:disabled {
+    cursor: wait;
+}
+.columb-tribute__stats {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    margin-top: 6px;
+}
+.columb-tribute__stats[hidden] {
+    display: none;
+}
+.columb-tribute__item {
+    background: #F6F1E8;
+    color: #1B4332;
+    border-radius: 2px;
+    min-height: 0;
+    padding: 4px 2px;
+    text-align: center;
+}
+.columb-tribute__label {
+    display: block;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.15;
+}
+.columb-tribute__num {
+    display: block;
+    margin-top: 2px;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+}
+.columb-tribute__note {
+    grid-column: 1 / -1;
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.4;
+    color: #F6F1E8;
+}
+
 .columb-info-close {
     position: absolute;
-    top: 12px;
-    right: 12px;
+    top: 8px;
+    right: 8px;
     background: rgba(255,255,255,0.1);
     border: none;
     color: #fff;
-    width: 28px;
-    height: 28px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .columb-hint {
+    flex: 0 0 auto;
     text-align: center;
-    font-size: 13px;
-    color: rgba(255,255,255,0.35);
-    margin-top: 12px;
+    font-size: 16px;
+    color: rgba(255,255,255,0.72);
+    margin: 8px 0 0;
 }
 
 @media (max-width: 780px) {
+    .columbarium-viewer:has(#columbarium-template-root[data-template]) {
+        height: auto;
+        max-height: none;
+        overflow: visible;
+    }
     .columb-toolbar { gap: 8px; }
     .columb-toolbar__search-wrap {
         flex: 1 1 100%;
         max-width: none;
         order: 3;
     }
-    .columb-legend { display: none; }
-    .columb-info-panel { bottom: 80px; right: 12px; left: 12px; width: auto; }
+    .columb-legend { display: flex; flex: 1 1 100%; margin-left: 0; }
+    .columb-info-panel { bottom: 12px; right: 12px; left: 12px; width: auto; max-height: none; overflow: hidden; }
 }
 /* ─── memorial-embed: 추모관 목록 위젯 (섹션 하단 full-width) ─── */
 /* memorial 섹션: 미리보기+설명+추모관둘러보기 한 화면에 */
@@ -3522,13 +3752,13 @@ button {
 .columbarium-layout {
     display: block;
     width: 100%;
-    max-width: 1180px;
+    max-width: min(1680px, calc(100vw - 32px));
     margin: 0 auto;
 }
 
 .columbarium-section {
     background: linear-gradient(160deg, #0d1322 0%, #0a1628 100%);
-    padding: 80px 0;
+    padding: 80px 0 20px;
 }
 
 .columbarium-section .section-header {
@@ -3837,19 +4067,20 @@ button {
     .columb-selected__clear {
         right: 50%;
         top: auto;
-        bottom: 12px;
+        bottom: 44px;
         transform: translateX(50%);
     }
 }
 
 .columb-floor-stats {
-    margin: 0 0 10px;
+    flex: 0 0 auto;
+    margin: 0 0 8px;
     padding: 0 4px;
-    font-size: 12px;
+    font-size: 16px;
     font-weight: 600;
     line-height: 1.45;
     letter-spacing: -0.02em;
-    color: rgba(200, 169, 110, 0.78);
+    color: rgba(240, 220, 170, 0.95);
     text-align: center;
 }
 
@@ -4637,6 +4868,34 @@ body.memorial-apply-page .memorial-apply-form {
 }
 @media (max-width: 500px) {
     .form-row-2col { grid-template-columns: 1fr; }
+}
+.phone-verify-row[hidden] { display: none !important; }
+.phone-verify-controls {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
+}
+.phone-verify-btn {
+    padding: 0 14px;
+    min-height: 44px;
+    border-radius: var(--radius);
+    border: 1.5px solid var(--gold, #a07840);
+    background: #fff;
+    color: var(--gold, #a07840);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.phone-verify-btn:hover:not(:disabled) { background: rgba(160,120,64,0.08); }
+.phone-verify-btn:disabled { opacity: 0.55; cursor: default; }
+.phone-verify-hint { margin: 2px 0 0; font-size: 12px; color: #64748b; line-height: 1.4; min-height: 1em; }
+.phone-verify-hint.is-ok { color: #1a7a40; font-weight: 600; }
+.phone-verify-hint.is-error { color: #b02020; }
+@media (max-width: 500px) {
+    .phone-verify-controls { grid-template-columns: minmax(0, 1fr) auto; }
+    .phone-verify-controls #phoneOtpSendBtn { grid-column: 1 / -1; }
 }
 
 /* ——— 모바일·태블릿 한글 타이포 / 줄맞춤 보강 ——— */
