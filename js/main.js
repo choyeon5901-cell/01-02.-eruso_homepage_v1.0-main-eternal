@@ -284,13 +284,21 @@ startHeroLifeJourney();
         if (icon) icon.className = playing ? 'fas fa-volume-high' : 'fas fa-music';
     }
 
+    function heroAudible() {
+        const heroEl = document.querySelector('.hero');
+        if (!heroEl) return 1;
+        const rect = heroEl.getBoundingClientRect();
+        const view = window.innerHeight || 1;
+        const visiblePx = Math.min(rect.bottom, view) - Math.max(rect.top, 0);
+        const span = Math.min(Math.max(rect.height, 1), view);
+        const ratio = Math.min(1, Math.max(0, visiblePx / span));
+        if (ratio >= 0.55) return 1;
+        return ratio / 0.55;
+    }
+
     function updateScrollFade() {
         if (!wantOn || audio.paused) return;
-        const heroEl = document.querySelector('.hero');
-        if (!heroEl) return;
-        const rect = heroEl.getBoundingClientRect();
-        const vis = Math.min(1, Math.max(0, rect.bottom / Math.max(rect.height, 1)));
-        audio.volume = BASE_VOLUME * (0.35 + 0.65 * vis);
+        audio.volume = BASE_VOLUME * heroAudible();
     }
 
     function playBgm() {
@@ -348,12 +356,31 @@ startHeroLifeJourney();
     audio.addEventListener('playing', () => setUi(true));
     audio.addEventListener('error', () => setUi(false, '음원을 불러오지 못했습니다'));
 
+    let pageLeft = false;
+
+    function releaseBgm() {
+        pageLeft = true;
+        starting = false;
+        try {
+            audio.pause();
+            audio.volume = 0;
+        } catch (_) { /* ignore */ }
+    }
+
+    window.addEventListener('pagehide', releaseBgm);
+    window.addEventListener('beforeunload', releaseBgm);
+
     document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
+        if (document.hidden || pageLeft) {
             try { audio.pause(); } catch (_) { /* ignore */ }
             return;
         }
         if (wantOn) playBgm();
+    });
+
+    window.addEventListener('pageshow', () => {
+        pageLeft = false;
+        if (wantOn && !document.hidden) playBgm();
     });
 
     window.addEventListener('scroll', updateScrollFade, { passive: true });
@@ -611,7 +638,12 @@ placeNavMenuForViewport();
 navLinks.forEach((link) => {
     link.addEventListener('click', (event) => {
         const href = link.getAttribute('href');
-        if (!href || !href.startsWith('#')) return;
+        if (!href || !href.startsWith('#')) {
+            if (navMenu?.contains(link)) {
+                window.setTimeout(() => closeMenu(), 0);
+            }
+            return;
+        }
 
         const target = document.querySelector(href);
         if (!target) return;
@@ -1067,8 +1099,126 @@ function initContactForm() {
         return memorialPopup;
     }
 
+    function getApiBase() {
+        const metaApi = document.querySelector('meta[name="eruso-api-base"]')?.content;
+        return (isLocal ? 'http://localhost:1210' : (metaApi || 'https://api.erum2026.co.kr')).replace(/\/$/, '');
+    }
+
+    function apiErrorMessage(text, fallback) {
+        try {
+            const detail = JSON.parse(text)?.detail;
+            if (typeof detail === 'string' && detail.trim()) return detail.trim();
+        } catch (_) { /* 비 JSON 응답 */ }
+        return fallback;
+    }
+
+    const nameInput = document.getElementById('contactName');
+    const phoneInput = document.getElementById('contactPhone');
+    const phoneVerifyRow = document.getElementById('phoneVerifyRow');
+    const otpInput = document.getElementById('contactPhoneOtp');
+    const otpSendBtn = document.getElementById('phoneOtpSendBtn');
+    const otpConfirmBtn = document.getElementById('phoneOtpConfirmBtn');
+    const phoneVerifyHint = document.getElementById('phoneVerifyHint');
+    let phoneVerificationToken = '';
+    let phoneOtpSent = false;
+
+    function setPhoneVerifyHint(text, state) {
+        if (!phoneVerifyHint) return;
+        phoneVerifyHint.textContent = text || '';
+        phoneVerifyHint.classList.toggle('is-ok', state === 'ok');
+        phoneVerifyHint.classList.toggle('is-error', state === 'error');
+    }
+
+    function resetPhoneVerification() {
+        phoneVerificationToken = '';
+        phoneOtpSent = false;
+        if (otpInput) { otpInput.value = ''; otpInput.disabled = false; }
+        if (otpSendBtn) { otpSendBtn.disabled = false; otpSendBtn.textContent = '인증번호 받기'; }
+        if (otpConfirmBtn) otpConfirmBtn.disabled = false;
+        setPhoneVerifyHint('');
+    }
+
+    function markPhoneVerified(token, message) {
+        phoneVerificationToken = token;
+        if (otpInput) otpInput.disabled = true;
+        if (otpSendBtn) { otpSendBtn.disabled = true; otpSendBtn.textContent = '인증완료'; }
+        if (otpConfirmBtn) otpConfirmBtn.disabled = true;
+        setPhoneVerifyHint(message || '휴대폰 본인인증이 완료되었습니다.', 'ok');
+    }
+
+    function readNamePhone() {
+        const name = nameInput?.value.trim() || '';
+        const phone = phoneInput?.value.trim() || '';
+        if (!name) { setPhoneVerifyHint('신청자 성함을 먼저 입력해 주세요.', 'error'); nameInput?.focus(); return null; }
+        if (phone.replace(/\D/g, '').length < 10) { setPhoneVerifyHint('연락처를 먼저 입력해 주세요.', 'error'); phoneInput?.focus(); return null; }
+        return { name, phone };
+    }
+
+    async function postPhoneOtp(path, body) {
+        const resp = await fetch(`${getApiBase()}/api/consultations/${path}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const text = await resp.text();
+        if (!resp.ok) throw new Error(apiErrorMessage(text, '본인인증 요청에 실패했습니다. 잠시 후 다시 시도해 주세요.'));
+        return text ? JSON.parse(text) : {};
+    }
+
+    otpSendBtn?.addEventListener('click', async () => {
+        const who = readNamePhone();
+        if (!who) return;
+        otpSendBtn.disabled = true;
+        setPhoneVerifyHint('인증번호 요청 중...');
+        try {
+            const res = await postPhoneOtp('send-phone-otp', who);
+            phoneOtpSent = true;
+            if (res.bypass && res.phone_verification_token) {
+                if (otpInput) otpInput.value = String(res.debug_otp || '');
+                markPhoneVerified(res.phone_verification_token, '휴대폰 본인인증이 완료되었습니다.');
+                return;
+            }
+            if (res.debug_otp && otpInput) otpInput.value = String(res.debug_otp);
+            setPhoneVerifyHint(res.phone_masked
+                ? `${res.phone_masked}(으)로 인증번호를 보냈습니다. 5분 안에 입력해 주세요.`
+                : '인증번호를 보냈습니다. 5분 안에 입력해 주세요.');
+            otpSendBtn.textContent = '재발송';
+            otpInput?.focus();
+        } catch (err) {
+            setPhoneVerifyHint(err.message, 'error');
+        } finally {
+            if (!phoneVerificationToken) otpSendBtn.disabled = false;
+        }
+    });
+
+    otpConfirmBtn?.addEventListener('click', async () => {
+        if (phoneVerificationToken) return;
+        const who = readNamePhone();
+        if (!who) return;
+        if (!phoneOtpSent) { setPhoneVerifyHint('먼저 인증번호 받기를 눌러 주세요.', 'error'); return; }
+        const otp = otpInput?.value.trim() || '';
+        if (!otp) { setPhoneVerifyHint('인증번호를 입력해 주세요.', 'error'); otpInput?.focus(); return; }
+        otpConfirmBtn.disabled = true;
+        try {
+            const res = await postPhoneOtp('confirm-phone-otp', { ...who, otp });
+            if (!res.phone_verification_token) throw new Error('본인인증 토큰을 받지 못했습니다. 다시 시도해 주세요.');
+            markPhoneVerified(res.phone_verification_token);
+        } catch (err) {
+            setPhoneVerifyHint(err.message, 'error');
+        } finally {
+            if (!phoneVerificationToken) otpConfirmBtn.disabled = false;
+        }
+    });
+
+    [nameInput, phoneInput].forEach((el) => {
+        el?.addEventListener('input', () => {
+            if (phoneVerificationToken || phoneOtpSent) resetPhoneVerification();
+        });
+    });
+
     function syncMemorialFields(openIfMemorial) {
         const memorial = isMemorialSelected();
+        if (phoneVerifyRow) phoneVerifyRow.hidden = !memorial;
         const msg = document.getElementById('contactMessage');
         if (msg) {
             msg.placeholder = memorial
@@ -1119,9 +1269,18 @@ function initContactForm() {
             openMemorialPopup();
             return;
         }
+        if (memorial && !phoneVerificationToken) {
+            if (notice) {
+                notice.className = 'form-notice error';
+                notice.textContent = '휴대폰 본인인증을 완료해 주세요. (인증번호 받기 → 인증확인)';
+                notice.style.display = 'block';
+            }
+            setPhoneVerifyHint('휴대폰 본인인증을 완료해 주세요.', 'error');
+            phoneVerifyRow?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
 
-        const metaApi = document.querySelector('meta[name="eruso-api-base"]')?.content;
-        const apiBase = (isLocal ? 'http://localhost:1210' : (metaApi || 'https://api.erum2026.co.kr')).replace(/\/$/, '');
+        const apiBase = getApiBase();
         const planCode = document.getElementById('selectedPlanCode')?.value || 'FREE';
         const planLabel = document.getElementById('selectedPackage')?.value || PLAN_NAMES[planCode] || planCode;
 
@@ -1164,8 +1323,10 @@ function initContactForm() {
             video_b64: memorial ? memorialDraft.video_b64 || null : null,
             video_ext: memorial ? memorialDraft.video_ext || null : null,
             video_url: memorial ? memorialDraft.video_url || null : null,
+            phone_verification_token: memorial ? phoneVerificationToken : null,
         };
 
+        if (notice) notice.style.display = 'none';
         submitBtn.disabled = true;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin" aria-hidden="true"></i> 접수 중...';
 
@@ -1178,7 +1339,11 @@ function initContactForm() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
             });
-            if (!resp.ok) throw new Error(await resp.text());
+            if (!resp.ok) {
+                const err = new Error(await resp.text());
+                err.status = resp.status;
+                throw err;
+            }
 
             notice.className = 'form-notice success';
             notice.textContent = memorial
@@ -1186,14 +1351,20 @@ function initContactForm() {
                 : '이용신청이 접수되었습니다. 관리자 확인 후 연락드립니다. (1~2 영업일)';
             notice.style.display = 'block';
             form.reset();
+            resetPhoneVerification();
             memorialDraft = null;
             window.erusoMemorialDraft = null;
             setServiceType(MEMORIAL_SERVICE);
             document.querySelector('.package-card[data-plan="FREE"]')?.click();
             syncMemorialFields();
         } catch (err) {
+            const detail = err.status ? apiErrorMessage(err.message, '') : '';
+            if (/인증/.test(detail)) {
+                resetPhoneVerification();
+                setPhoneVerifyHint(detail, 'error');
+            }
             notice.className = 'form-notice error';
-            notice.textContent = '신청 중 오류가 발생했습니다. 전화로 문의해 주세요.';
+            notice.textContent = detail || '신청 중 오류가 발생했습니다. 전화로 문의해 주세요.';
             notice.style.display = 'block';
             console.error('[contact form]', err);
         } finally {
