@@ -6,7 +6,8 @@
     <meta name="description" content="이루소는 사랑하는 이를 위한 디지털 추모의 자리입니다. 온라인 추모관·부고 공유·조문록·사진과 영상 기록을 한곳에서 관리하는 디지털 추모 플랫폼입니다.">
     <title>이루소 | 기억을 오래 머물게 하는 온라인 추모관</title>
     <link rel="canonical" href="https://eruso.co.kr/" />
-    <link rel="icon" href="public/favicon.ico" />
+    <link rel="icon" id="app-favicon" href="/favicon.ico" sizes="any">
+    <script>document.getElementById("app-favicon").href="/favicon.ico?v="+Date.now()</script>
 
     <!-- Open Graph (eruso.co.kr) -->
     <meta property="og:type" content="website" />
@@ -26,7 +27,7 @@
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/memorial.css?v=20261006-info">
+    <link rel="stylesheet" href="css/memorial.css?v=20261025-phoneverify">
     <script type="importmap">
     {
       "imports": {
@@ -557,6 +558,7 @@
                 <!-- ─── 봉안당 뷰어 ─── -->
                 <div class="columbarium-viewer" id="columbariumSection">
                     <div class="columb-toolbar">
+                        <span class="columb-hall-scope" data-zone-hall aria-label="검색 범위">제1봉안당</span>
                         <div class="columb-zone-tabs" id="columbZoneTabs">
                             <button class="columb-zone-tab active" data-zone="A">A동</button>
                             <button class="columb-zone-tab" data-zone="B">B동</button>
@@ -575,11 +577,11 @@
                             <button id="columbMemorialSearchBtn" type="button" class="columb-toolbar__btn columb-toolbar__btn--search">검색</button>
                             <button id="columbMemorialResetBtn" type="button" class="columb-toolbar__btn columb-toolbar__btn--reset">초기화</button>
                         </div>
-                        <div class="columb-legend">
-                            <span class="columb-legend-dot occupied"></span>공개
-                            <span class="columb-legend-dot" style="background:rgba(140,110,70,0.88);"></span>비공개
-                            <span class="columb-legend-dot available"></span>분양가능
-                            <span class="columb-legend-dot selected"></span>선택됨
+                        <div class="columb-legend" aria-label="봉안함 상태">
+                            <span class="columb-legend-item"><span class="columb-legend-swatch is-open" aria-hidden="true"></span>분양가능</span>
+                            <span class="columb-legend-item"><span class="columb-legend-swatch is-private" aria-hidden="true"></span>비공개</span>
+                            <span class="columb-legend-item"><span class="columb-legend-swatch is-public" aria-hidden="true"></span>공개</span>
+                            <span class="columb-legend-item"><span class="columb-legend-swatch is-picked" aria-hidden="true"></span>선택됨</span>
                         </div>
                     </div>
                     <p id="columbFloorStats" class="columb-floor-stats" aria-live="polite"></p>
@@ -1336,6 +1338,15 @@
                                 <input type="tel" id="contactPhone" name="phone" placeholder="010-0000-0000" autocomplete="tel" required>
                             </div>
                         </div>
+                        <div class="form-row phone-verify-row" id="phoneVerifyRow">
+                            <label for="contactPhoneOtp">휴대폰 본인인증 <span class="req">*</span></label>
+                            <div class="phone-verify-controls">
+                                <button type="button" class="phone-verify-btn" id="phoneOtpSendBtn">인증번호 받기</button>
+                                <input type="text" id="contactPhoneOtp" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="인증번호 6자리">
+                                <button type="button" class="phone-verify-btn" id="phoneOtpConfirmBtn">인증확인</button>
+                            </div>
+                            <p class="phone-verify-hint" id="phoneVerifyHint" aria-live="polite"></p>
+                        </div>
                         <div class="form-row">
                             <label for="contactEmail">이메일 <span class="opt">(선택)</span></label>
                             <input type="email" id="contactEmail" name="email" autocomplete="email" placeholder="example@email.com">
@@ -1453,9 +1464,9 @@
     </button>
 
     <script src="js/elevisorPresence.js?v=20260812-accesslog2"></script>
-    <script src="js/main.js?v=20261004-bgm-leave"></script>
+    <script src="js/main.js?v=20261025-phoneverify"></script>
     <script src="js/community-board.js?v=20260820-nav-board-fix2"></script>
-    <script src="js/columbarium-templates.js?v=20261005-r3f"></script>
-    <script src="js/columbarium.js?v=20261006-info2"></script>
+    <script src="js/columbarium-templates.js?v=20261007-hallview"></script>
+    <script src="js/columbarium.js?v=20261007-tribute2"></script>
 </body>
 </html>
